@@ -47,6 +47,16 @@ def set_scope(scope):
     else:
         raise Exception("Unknown scope")
 
+def check_dir(dname):
+        """Check if directory exists, create it if it doesn't"""
+        direc = os.path.dirname(dname)
+        try:
+                os.stat(direc)
+        except:
+                os.mkdir(direc)
+                print "Made directory %s...." % dname
+        return dname    
+
 def save_scopeTraces(fileName, scope, channel, noPulses):
 
     scope._get_preamble(channel)
@@ -179,10 +189,8 @@ def sweep(dir_out,file_out,box,channel,width,delay,scope,min_volt=None):
     print "PIN (sweep):",pin
     sc.stop()
 
-    directory = "%s/channel_%02d"%(dir_out,logical_channel)
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-    fname = "%s/Chan%02d_Width%05d" % (directory,logical_channel,width)
+    directory = check_dir("%s/raw_data/Channel_%02d"%(dir_out,logical_channel))
+    fname = "%s/Width%05d" % (directory,width)
     print "Saving raw files to: %s..." % fname
     sc.fire_continuous()
     time.sleep(0.1)
@@ -203,6 +211,5 @@ def sweep(dir_out,file_out,box,channel,width,delay,scope,min_volt=None):
     calc.printParamsDict(results, width)
     calc.plot_eg_pulses(x,y,10, fname='./low_intensity/LastMeasuredPulses.png')
     os.system("open ./low_intensity/LastMeasuredPulses.png")
-
 
     return results

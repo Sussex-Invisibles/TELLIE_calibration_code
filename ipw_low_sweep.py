@@ -69,12 +69,12 @@ if __name__=="__main__":
 
     #Create a new, timestamped, summary file
     timestamp = time.strftime("%y%m%d_%H.%M",time.gmtime())
-    dir = "low_intensity"
-    output_filename = "%s/Box%02d_Channel%d_%s.dat" % (dir,box,channel,timestamp)
+    saveDir = sweep.check_dir("low_intensity/Box_%02d/" % (box))
+    output_filename = "%s/%d_IPWlow_%s.dat" % (saveDir,channel,timestamp)
     #results = utils.PickleFile(output_filename, 1)
     
     output_file = file(output_filename,'w')
-    output_file.write("PWIDTH\tPWIDTH Error\tPIN\tPIN Error\tWIDTH\tWIDTH Error\tRISE\tRISE Error\tFALL\tFALL Error\tAREA\tAREA Error\tMinimum\tMinimum Error\n")
+    output_file.write("#PWIDTH\tPWIDTH Error\tPIN\tPIN Error\tWIDTH\tWIDTH Error\tRISE\tRISE Error\tFALL\tFALL Error\tAREA\tAREA Error\tMinimum\tMinimum Error\n")
 
     #Start scanning!
     widths = range(cutoff-500,cutoff+101,100)
@@ -88,7 +88,7 @@ if __name__=="__main__":
             #set a best guess for the trigger and the scale
             #using the last sweeps value
             min_volt = float(tmpResults["peak"])
-        tmpResults = sweep.sweep(dir,output_filename,box,channel,width,delay,scope,min_volt)
+        tmpResults = sweep.sweep(saveDir,output_filename,box,channel,width,delay,scope,min_volt)
                 
         #results.set_meta_data("area", tmpResults["area"])
         #results.set_meta_data("area error", tmpResults["area error"])
