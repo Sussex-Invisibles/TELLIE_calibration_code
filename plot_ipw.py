@@ -18,7 +18,7 @@ try:
 except ImportError:
     pass
 import ROOT
-import math
+import numpy as np
 import optparse
 import os
 
@@ -28,34 +28,18 @@ def read_scope_scan(fname):
     Rise and fall are opposite to the meaning we use (-ve pulse)
     """
     fin = file(fname,'r')
-    ipw, ipw_err = [], []
-    pin, pin_err = [], []
-    width, width_err = [], []
-    rise, rise_err = [], []
-    fall, fall_err = [], []
-    area, area_err = [], []
-    mini, mimi_err = [], []
+    resultsList = []
     for line in fin.readlines():
         if line[0]=="#":
             continue
         bits = line.split()
-        if len(bits)!=7:
+        if len(bits)!=14:
             continue
-        ipw.append(int(bits[0]))
-        ipw_err.append(int(bits[1]))
-        pin.append(int(bits[2]))
-        pin_err.append(int(bits[3]))
-        width.append(float(bits[4]))
-        width_err.append(float(bits[5]))
-        rise.append(float(bits[6]))
-        rise_err.append(float(bits[7]))
-        fall.append(float(bits[8])) #rise in file -> fall
-        fall_err.append(float(bits[9]))
-        area.append(float(bits[10]))
-        area_err.append(float(bits[11]))
-        mini.append(float(bits[12]))
-        mini_err.append(float(bits[13]))
-    return ipw,pin,pin_err,width,width_err,rise,rise_err,fall,fall_err,area,area_err
+        # Append needs to all be done in one. If we make a dict 'results = {}' which we 
+        # re-write and append it fills with all the same object and so we have multiple copies
+        # of the same result.
+        resultsList.append({"ipw":int(bits[0]),"ipw_err": int(bits[1]),"pin":int(bits[2]),"pin_err":int(bits[3]),"width":float(bits[4]),"width_err":float(bits[5]),"rise":float(bits[6]),"rise_err":float(bits[7]),"fall":float(bits[8]),"fall_err":float(bits[9]),"area":float(bits[10]),"area_err":float(bits[11]),"mini":float(bits[12]),"mini_err":float(bits[13])})
+    return resultsList
 
 def get_gain(applied_volts):
     """Get the gain from the applied voltage"""
@@ -77,9 +61,10 @@ def get_scope_response(applied_volts):
 
 def adjust_width(seconds,applied_volts):
     """ Adjust the width, removing the scope response time"""
+    return seconds
     time_correction = get_scope_response(applied_volts)
     try:
-        width =  2.355*math.sqrt(((seconds * seconds)/(2.355*2.355))-time_correction*time_correction)
+        width =  2.355*np.sqrt(((seconds * seconds)/(2.355*2.355))-time_correction*time_correction)
         return width
     except:
         print 'ERROR: Could not calculate the fall time. Returning 0'
@@ -88,9 +73,10 @@ def adjust_width(seconds,applied_volts):
 
 def adjust_rise(seconds,applied_volts):
     """ Adjust EITHER the rise OR fall time (remove scope response)"""
+    return seconds
     time_correction = get_scope_response(applied_volts)    
     try:
-        width =  1.687*math.sqrt(((seconds * seconds)/(1.687*1.687))-time_correction*time_correction)
+        width =  1.687*np.sqrt(((seconds * seconds)/(1.687*1.687))-time_correction*time_correction)
         return width
     except:
         print 'ERROR: Could not calculate the rise/fall time. Returning 0'
@@ -105,17 +91,60 @@ def get_photons(volts_seconds,applied_volts):
     eV = 1.602e-19
     qe = 0.192 # @ 488nm
     gain = get_gain(applied_volts)
-    photons = math.fabs(volts_seconds) / (impedence * eV * gain)
+    photons = np.fabs(volts_seconds) / (impedence * eV * gain)
     photons /= qe
     return photons
 
-def set_style(gr,style):
+def set_style(gr,style=1,title_size=0.04):
+    gr.GetXaxis().SetTitleSize(title_size)
+    gr.GetYaxis().SetTitleSize(title_size)
     if style==1:
-        gr.SetMarkerColor(ROOT.kBlue+1)
-        gr.SetMarkerStyle(4)
-    else:
+        gr.SetMarkerStyle(8)
+        gr.SetMarkerSize(0.5)
+    if style==2:
         gr.SetMarkerColor(ROOT.kRed+1)
-        gr.SetMarkerStyle(25)
+        gr.SetLineColor(ROOT.kRed+1)
+        gr.SetMarkerStyle(8)
+        gr.SetMarkerSize(0.5)
+    if style==3:
+        gr.SetMarkerColor(ROOT.kBlue+1)
+        gr.SetLineColor(ROOT.kBlue+1)
+        gr.SetMarkerStyle(8)
+        gr.SetMarkerSize(0.5)        
+
+def master_plot(fname, ph_ipw, w_ipw, r_ipw, f_ipw, pin_ipw, ph_pin):
+    # Create nea canvas and split it into four
+    nCan = ROOT.TCanvas()
+    nCan.Divide(2,2)
+    nCan.cd(1)
+    set_style(ph_ipw, title_size=0.053)
+    ph_ipw.Draw("AP")
+
+    nCan.cd(2)
+    multi = ROOT.TMultiGraph()
+    set_style(w_ipw)
+    set_style(r_ipw, style=2)
+    set_style(f_ipw,style=3)
+    multi.Add(w_ipw)
+    multi.Add(r_ipw)
+    multi.Add(f_ipw)
+    multi.Draw("APL")
+    multi.GetXaxis().SetTitle("IPW (14 bit)")
+    multi.GetYaxis().SetTitle("Time (ns)")
+    multi.GetXaxis().SetTitleSize(0.053)
+    multi.GetYaxis().SetTitleSize(0.053)
+    multi.Draw("AP")
+
+    nCan.cd(3)
+    set_style(pin_ipw, title_size=0.053)
+    pin_ipw.Draw("AP")
+
+    nCan.cd(4)
+    set_style(ph_pin, title_size=0.053)
+    ph_pin.Draw("AP")
+
+    nCan.Print(fname)    
+    
     
 if __name__=="__main__":
     parser = optparse.OptionParser()
@@ -127,11 +156,13 @@ if __name__=="__main__":
         print "Can only run for LeCroy or Tektronix"
         sys.exit()
 
-    sweep_type = options.file.split('/')[0]
-    file_name = options.file.split('/')[1]
-    box = int(file_name.split('_')[0][-2:])
-    channel = int(file_name.split('_')[1][-1:])
+    p =  options.file.split('/')
+    sweep_type = p[0]
+    file_name = p[1]
+    box = int(p[1][-2:])
+    channel = int(p[2][4:6])
     logical_channel = (box-1) * 8 + channel
+    print sweep_type, file_name, box, channel, logical_channel
 
     voltage = 0
     if sweep_type=="low_intensity":
@@ -141,9 +172,9 @@ if __name__=="__main__":
     else:
         raise Exception,"unknown sweep type %s"%(sweep_type)
 
-    dirname = os.path.join(sweep_type,"channel_%02d"%logical_channel)
+    dirname = os.path.join(sweep_type,"plots/channel_%02d"%logical_channel)
 
-    ipw,pin,pin_err,width,width_err,rise,rise_err,fall,fall_err,area,area_err = read_scope_scan(options.file)
+    res_list = read_scope_scan(options.file)
 
     #make plots!
     photon_vs_pin = ROOT.TGraphErrors()
@@ -156,38 +187,38 @@ if __name__=="__main__":
     fall_vs_ipw = ROOT.TGraphErrors()
     pin_vs_ipw = ROOT.TGraphErrors()
 
-    for i in range(len(ipw)):
+    for i in range(len(res_list)):
 
-        print "IPW: %04d"%(ipw[i])        
+        print "IPW: %04d"%(res_list[i]["ipw"])
 
         #Plot measured values
-        photon = get_photons(area[i],voltage)
-        photon_err = get_photons(area_err[i], voltage)
-        rise_time = adjust_rise(rise[i]*1e9,voltage)
-        rise_time_err = adjust_rise(rise[i]*1e9, voltage)
-        fall_time = adjust_rise(fall[i]*1e9,voltage)
-        fall_time_err = adjust_rise(fall_err[i]*1e9, voltage)
-        width_time = adjust_width(width[i]*1e9,voltage)
-        width_time_err = adjust_width(width[i]*1e9, voltage)
+        photon = get_photons(res_list[i]["area"],voltage)
+        photon_err = get_photons(res_list[i]["area_err"], voltage)
+        rise_time = adjust_rise(res_list[i]["rise"]*1e9,voltage)
+        rise_time_err = res_list[i]["rise_err"]*1e9
+        fall_time = adjust_rise(res_list[i]["fall"]*1e9,voltage)
+        fall_time_err = res_list[i]["fall_err"]*1e9
+        width_time = adjust_width(res_list[i]["width"]*1e9,voltage)
+        width_time_err = res_list[i]["width_err"]*1e9
 
-        pin_vs_ipw.SetPoint(i,ipw[i],pin[i])
+        pin_vs_ipw.SetPoint(i,res_list[i]["ipw"],res_list[i]["pin"])
 
-        photon_vs_pin.SetPoint(i,pin[i],photon)
-        photon_vs_pin.SetPointError(i,pin_err[i],photon_err)
-        photon_vs_ipw.SetPoint(i,ipw[i],photon)
-        photon_vs_ipw.SetPointError(i,ipw_err[i],photon_err)
+        photon_vs_pin.SetPoint(i,res_list[i]["pin"],photon)
+        photon_vs_pin.SetPointError(i,res_list[i]["pin_err"],photon_err)
+        photon_vs_ipw.SetPoint(i,res_list[i]["ipw"],photon)
+        photon_vs_ipw.SetPointError(i,res_list[i]["ipw_err"],photon_err)
         rise_vs_photon.SetPoint(i,photon,rise_time)
         rise_vs_photon.SetPointError(i,photon_err,rise_time_err)
-        rise_vs_ipw.SetPoint(i,ipw[i],rise_time)
-        rise_vs_ipw.SetPointError(i,ipw_err[i],rise_time_err)
+        rise_vs_ipw.SetPoint(i,res_list[i]["ipw"],rise_time)
+        rise_vs_ipw.SetPointError(i,res_list[i]["ipw_err"],rise_time_err)
         fall_vs_photon.SetPoint(i,photon,fall_time)
         fall_vs_photon.SetPointError(i,photon_err,fall_time_err)
-        fall_vs_ipw.SetPoint(i,ipw[i],fall_time)
-        fall_vs_ipw.SetPointError(i,ipw_err[i],fall_time_err)
+        fall_vs_ipw.SetPoint(i,res_list[i]["ipw"],fall_time)
+        fall_vs_ipw.SetPointError(i,res_list[i]["ipw_err"],fall_time_err)
         width_vs_photon.SetPoint(i,photon,width_time)
         width_vs_photon.SetPointError(i,photon_err,width_time_err)
-        width_vs_ipw.SetPoint(i,ipw[i],width_time)
-        width_vs_ipw.SetPointError(i,ipw_err[i],width_time_err)
+        width_vs_ipw.SetPoint(i,res_list[i]["ipw"],width_time)
+        width_vs_ipw.SetPointError(i,res_list[i]["ipw_err"],width_time_err)
 
 
     set_style(pin_vs_ipw,1)
@@ -200,16 +231,36 @@ if __name__=="__main__":
     set_style(width_vs_photon,1)
     set_style(width_vs_ipw,1)
 
+    # Add titles and labels
+    pin_vs_ipw.SetName("pin_vs_ipw")
+    pin_vs_ipw.GetXaxis().SetTitle("IPW (14 bit)")
+    pin_vs_ipw.GetYaxis().SetTitle("PIN reading (16 bit)")
     photon_vs_pin.SetName("photon_vs_pin")
+    photon_vs_pin.GetXaxis().SetTitle("PIN reading (16 bit)")
+    photon_vs_pin.GetYaxis().SetTitle("No. photons")
     photon_vs_ipw.SetName("photon_vs_ipw")
+    photon_vs_ipw.GetXaxis().SetTitle("IPW (14 bit)")
+    photon_vs_ipw.GetYaxis().SetTitle("No. photons")
     width_vs_photon.SetName("width_vs_photon")
+    width_vs_photon.GetXaxis().SetTitle("No. photons")
+    width_vs_photon.GetYaxis().SetTitle("Pulse FWHM (ns)")
     width_vs_ipw.SetName("width_vs_ipw")
+    width_vs_ipw.GetXaxis().SetTitle("IPW (14 bit)")
+    width_vs_ipw.GetYaxis().SetTitle("Pulse FWHM (ns)")
     rise_vs_photon.SetName("rise_vs_photon")
+    rise_vs_photon.GetXaxis().SetTitle("No. photons")
+    rise_vs_photon.GetYaxis().SetTitle("Rise time (ns)")
     rise_vs_ipw.SetName("rise_vs_ipw")
+    rise_vs_ipw.GetXaxis().SetTitle("IPW (14 bit)")
+    rise_vs_ipw.GetYaxis().SetTitle("Rise time (ns)")
     fall_vs_photon.SetName("fall_vs_photon")
+    fall_vs_photon.GetXaxis().SetTitle("No. photons")
+    fall_vs_photon.GetYaxis().SetTitle("Fall time (ns)")
     fall_vs_ipw.SetName("fall_vs_ipw")
+    fall_vs_ipw.GetXaxis().SetTitle("IPW (14 bit)")
+    fall_vs_ipw.GetYaxis().SetTitle("Fall time (ns)")
 
-    output_dir = os.path.join(dirname,"plots")
+    output_dir = os.path.join(dirname)
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
@@ -252,6 +303,10 @@ if __name__=="__main__":
     rise_vs_ipw.Write()
     fall_vs_photon.Write()
     fall_vs_ipw.Write()
+
+    out_dir = os.path.join(sweep_type,"plots/")
+    master_name = "%s/Chan%02d_%s.pdf" % (out_dir, logical_channel, sweep_type)
+    master_plot(master_name, photon_vs_ipw, width_vs_ipw, rise_vs_ipw, fall_vs_ipw, pin_vs_ipw, photon_vs_pin)
 
     fout.Close()
 
