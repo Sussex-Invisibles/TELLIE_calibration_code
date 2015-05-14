@@ -121,6 +121,7 @@ def master_plot(fname, ph_ipw, w_ipw, r_ipw, f_ipw, pin_ipw, ph_pin):
     ph_ipw.Draw("AP")
 
     nCan.cd(2)
+    leg = ROOT.TLegend(0.11,0.7,0.24,0.89)
     multi = ROOT.TMultiGraph()
     set_style(w_ipw)
     set_style(r_ipw, style=2)
@@ -133,7 +134,11 @@ def master_plot(fname, ph_ipw, w_ipw, r_ipw, f_ipw, pin_ipw, ph_pin):
     multi.GetYaxis().SetTitle("Time (ns)")
     multi.GetXaxis().SetTitleSize(0.053)
     multi.GetYaxis().SetTitleSize(0.053)
+    leg.AddEntry(w_ipw, 'Width', "p")
+    leg.AddEntry(r_ipw, 'Rise', 'p')
+    leg.AddEntry(f_ipw, 'Fall', 'p')
     multi.Draw("AP")
+    leg.Draw() 
 
     nCan.cd(3)
     set_style(pin_ipw, title_size=0.053)
