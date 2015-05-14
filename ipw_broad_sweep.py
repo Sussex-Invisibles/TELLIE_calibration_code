@@ -48,10 +48,11 @@ if __name__=="__main__":
     falling_edge = True
     min_trigger = -0.004
     y_div_units = 1 # volts
-    x_div_units = 4e-9 # seconds
-    y_offset = -2.5*y_div_units # offset in y (2.5 divisions up)
+    x_div_units = 10e-9 # seconds
+    #y_offset = -2.5*y_div_units # offset in y (2.5 divisions up)
+    y_offset = 0.5*y_div_units # offset in y (for UK scope)
     x_offset = +2*x_div_units # offset in x (2 divisions to the left)
-    record_length = 1e3 # trace is 1e3 samples long
+    record_length = 100e3 # trace is 1e3 samples long
     half_length = record_length / 2 # For selecting region about trigger point
     ###########################################
     scope.unlock()
@@ -66,11 +67,11 @@ if __name__=="__main__":
     scope.lock()
     scope.begin() # Acquires the pre-amble! 
 
-
     #Create a new, timestamped, summary file
     timestamp = time.strftime("%y%m%d_%H.%M",time.gmtime())
     saveDir = sweep.check_dir("broad_sweep/Box_%02d/" % (box))
-    output_filename = "%s/%d_IPWbroad_%s.dat" % (saveDir,channel,timestamp)
+    sweep.check_dir("%sraw_data/" % saveDir)
+    output_filename = "%s/Chan%02d_IPWbroad_%s.dat" % (saveDir,channel,timestamp)
     #results = utils.PickleFile(output_filename, 1)
     
     output_file = file(output_filename,'w')

@@ -23,4 +23,4 @@ if __name__ == "__main__":
     print "Reading + calcs on %d pulses from file took %1.2f s" % ( len(y[:,0]), (time.time()-fileRead) )
 
     ### PLOT ###
-    calc.plot_eg_pulses(x,y,5,show=True)
+    calc.plot_eg_pulses(x,y,10,show=True)

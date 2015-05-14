@@ -20,13 +20,15 @@ import readPklWaveFile
 import calc_utils as calc
 import numpy as np
 
-port_name = "/dev/tty.usbserial-FTE3C0PG"
+#port_name = "/dev/tty.usbserial-FTE3C0PG"
+port_name = "/dev/tty.usbserial-FTGA2OCZ"
 ## TODO: better way of getting the scope type
 scope_name = "Tektronix3000"
 _boundary = [0,1.5e-3,3e-3,7e-3,15e-3,30e-3,70e-3,150e-3,300e-3,700e-3,1000]
-#_v_div = [1e-3,2e-3,5e-3,10e-3,20e-3,50e-3,100e-3,200e-3,500e-3,1.0,1000]
-_v_div = [1e-3,2e-3,5e-3,10e-3,20e-3,50e-3,100e-3,200e-3,500e-3,1.0]
-_v_div_1 = [1e-3,2e-3,5e-3,10e-3,20e-3,50e-3,100e-3,200e-3,500e-3,1.0,2.0]
+#_v_div = [1e-3,2e-3,5e-3,10e-3,20e-3,50e-3,100e-3,200e-3,500e-3,1.0]
+#_v_div_1 = [1e-3,2e-3,5e-3,10e-3,20e-3,50e-3,100e-3,200e-3,500e-3,1.0,2.0]
+_v_div = [50e-3, 100e-3, 200e-3, 500e-3, 1] # For scope at sussex
+_v_div_1 = [50e-3, 100e-3, 200e-3, 500e-3, 1, 2]
 
 sc = None
 sc = serial_command.SerialCommand(port_name)
@@ -58,7 +60,7 @@ def check_dir(dname):
         return dname    
 
 def save_scopeTraces(fileName, scope, channel, noPulses):
-
+    """Save a number of scope traces to file - uses compressed .pkl"""
     scope._get_preamble(channel)
     results = utils.PickleFile(fileName, 1)
     results.add_meta_data("timeform_1", scope.get_timeform(channel))
@@ -77,7 +79,6 @@ def save_scopeTraces(fileName, scope, channel, noPulses):
     print "%d traces collected TOTAL - took : %1.1f s" % (i, (time.time()-t_start))
     results.save()
     results.close()
-
 
 def find_and_set_scope_y_scale(channel,height,width,delay,scope,scaleGuess=None):
     """Finds best y_scaling for current pulses
@@ -117,13 +118,13 @@ def find_and_set_scope_y_scale(channel,height,width,delay,scope,scaleGuess=None)
             if ct == True:
                 break
 
-    scope._get_preamble(channel)
     time.sleep(0.2)
+    scope._get_preamble(channel)
     # Calc min value
-    mini = np.zeros( 10 )
+    mini, wave = np.zeros( 10 ), None
     for i in range( len(mini) ):
         wave = scope.get_waveform(channel)
-        mini[i] = min(wave) #- np.mean(wave[0:50])
+        mini[i] = min(wave) - np.mean(wave[0:10])
     min_volt = np.mean(mini)
     print "MINIMUM MEASUREMENT:", min_volt
 
@@ -144,7 +145,6 @@ def find_and_set_scope_y_scale(channel,height,width,delay,scope,scaleGuess=None)
     sc.stop()
     return 0
     
-
 def sweep(dir_out,file_out,box,channel,width,delay,scope,min_volt=None):
     """Perform a measurement using a default number of
     pulses, with user defined width, channel and rate settings.
@@ -178,7 +178,7 @@ def sweep(dir_out,file_out,box,channel,width,delay,scope,min_volt=None):
     
     #sc.set_pulse_number(pulse_number)
     time.sleep(0.1)
-    sc.fire_averaged() # previously fire_sequence!
+    sc.fire_sequence() # previously fire_sequence!
     #wait for the sequence to end
     tsleep = pulse_number * (delay*1e-3 + 210e-6)
     time.sleep(tsleep) #add the offset in
@@ -189,8 +189,8 @@ def sweep(dir_out,file_out,box,channel,width,delay,scope,min_volt=None):
     print "PIN (sweep):",pin
     sc.stop()
 
-    directory = check_dir("%s/raw_data/Channel_%02d"%(dir_out,logical_channel))
-    fname = "%s/Width%05d" % (directory,width)
+    directory = check_dir("%s/raw_data/Channel_%02d/" % (dir_out,logical_channel))
+    fname = "%sWidth%05d" % (directory,width)
     print "Saving raw files to: %s..." % fname
     sc.fire_continuous()
     time.sleep(0.1)
@@ -209,7 +209,7 @@ def sweep(dir_out,file_out,box,channel,width,delay,scope,min_volt=None):
     results = calc.dictionary_of_params(x,y)
     results["pin"] = pin[logical_channel]
     calc.printParamsDict(results, width)
-    calc.plot_eg_pulses(x,y,10, fname='./low_intensity/LastMeasuredPulses.png')
-    os.system("open ./low_intensity/LastMeasuredPulses.png")
+    calc.plot_eg_pulses(x,y,10, fname='%s/LastMeasuredPulses.png' % dir_out.split("/")[0])
+    os.system("open %s/LastMeasuredPulses.png" % dir_out.split("/")[0])
 
     return results

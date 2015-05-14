@@ -172,7 +172,7 @@ if __name__=="__main__":
     voltage = 0
     if sweep_type=="low_intensity":
         voltage = 0.8
-    elif sweep_type=="broad":
+    elif sweep_type=="broad_sweep":
         voltage = 0.6
     else:
         raise Exception,"unknown sweep type %s"%(sweep_type)
