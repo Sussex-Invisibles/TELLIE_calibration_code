@@ -41,6 +41,17 @@ def read_scope_scan(fname):
         resultsList.append({"ipw":int(bits[0]),"ipw_err": int(bits[1]),"pin":int(bits[2]),"pin_err":int(bits[3]),"width":float(bits[4]),"width_err":float(bits[5]),"rise":float(bits[6]),"rise_err":float(bits[7]),"fall":float(bits[8]),"fall_err":float(bits[9]),"area":float(bits[10]),"area_err":float(bits[11]),"mini":float(bits[12]),"mini_err":float(bits[13])})
     return resultsList
 
+def clean_data(res_list):
+    """Clean data of Inf and Nan's so as not to confuse plots"""
+    for i in range(len(res_list)):
+        if np.isfinite(res_list[i]["rise"]) == False:
+            res_list[i]["rise"] = 0
+            res_list[i]["rise_err"] = 0
+        if np.isfinite(res_list[i]["fall"]) == False:
+            res_list[i]["fall"] = 0
+            res_list[i]["fall_err"] = 0
+    return res_list
+
 def get_gain(applied_volts):
     """Get the gain from the applied voltage"""
     gain = None
@@ -180,6 +191,7 @@ if __name__=="__main__":
     dirname = os.path.join(sweep_type,"plots/channel_%02d"%logical_channel)
 
     res_list = read_scope_scan(options.file)
+    res_list = clean_data(res_list)
 
     #make plots!
     photon_vs_pin = ROOT.TGraphErrors()
