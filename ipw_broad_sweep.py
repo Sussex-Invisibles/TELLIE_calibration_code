@@ -89,7 +89,7 @@ if __name__=="__main__":
             #set a best guess for the trigger and the scale
             #using the last sweeps value
             min_volt = float(tmpResults["peak"])
-        tmpResults = sweep.sweep(saveDir,output_filename,box,channel,width,delay,scope,min_volt)
+        tmpResults = sweep.sweep(saveDir,box,channel,width,delay,scope,min_volt)
                 
         #results.set_meta_data("area", tmpResults["area"])
         #results.set_meta_data("area error", tmpResults["area error"])

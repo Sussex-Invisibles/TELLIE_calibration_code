@@ -145,7 +145,7 @@ def find_and_set_scope_y_scale(channel,height,width,delay,scope,scaleGuess=None)
     sc.stop()
     return 0
     
-def sweep(dir_out,file_out,box,channel,width,delay,scope,min_volt=None):
+def sweep(dir_out,box,channel,width,delay,scope,min_volt=None):
     """Perform a measurement using a default number of
     pulses, with user defined width, channel and rate settings.
     """
