@@ -89,6 +89,8 @@ if __name__=="__main__":
             #set a best guess for the trigger and the scale
             #using the last sweeps value
             min_volt = float(tmpResults["peak"])
+            if min_volt == 0: # If bad data set, make none
+                min_volt = None
         tmpResults = sweep.sweep(saveDir,box,channel,width,delay,scope,min_volt)
                 
         #results.set_meta_data("area", tmpResults["area"])
