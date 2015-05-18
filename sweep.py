@@ -27,7 +27,7 @@ scope_name = "Tektronix3000"
 _boundary = [0,1.5e-3,3e-3,7e-3,15e-3,30e-3,70e-3,150e-3,300e-3,700e-3,1000]
 #_v_div = [1e-3,2e-3,5e-3,10e-3,20e-3,50e-3,100e-3,200e-3,500e-3,1.0]
 #_v_div_1 = [1e-3,2e-3,5e-3,10e-3,20e-3,50e-3,100e-3,200e-3,500e-3,1.0,2.0]
-_v_div = [20e-2, 50e-3, 100e-3, 200e-3, 500e-3, 1] # For scope at sussex
+_v_div = [20e-3, 50e-3, 100e-3, 200e-3, 500e-3, 1] # For scope at sussex
 _v_div_1 = [20e-3, 50e-3, 100e-3, 200e-3, 500e-3, 1, 2]
 
 sc = None
@@ -71,13 +71,11 @@ def return_zero_result():
 
 def save_scopeTraces(fileName, scope, channel, noPulses):
     """Save a number of scope traces to file - uses compressed .pkl"""
-    scope.unlock()
     scope._get_preamble(channel)
-    scope.lock()
     results = utils.PickleFile(fileName, 1)
     results.add_meta_data("timeform_1", scope.get_timeform(channel))
 
-    ct = scope.acquire_time_check(True, timeout=5.)
+    ct = scope.acquire_time_check(timeout=0.3)
     if ct == False:
         print 'No triggers for this data point. Will skip and set data to 0.'
         results.save()
@@ -95,7 +93,6 @@ def save_scopeTraces(fileName, scope, channel, noPulses):
             print "%d traces collected - This loop took : %1.1f s" % (i, time.time()-loopStart)
             loopStart = time.time()
     print "%d traces collected TOTAL - took : %1.1f s" % (i, (time.time()-t_start))
-    scope.unlock()
     results.save()
     results.close()
     return True
@@ -108,15 +105,14 @@ def find_and_set_scope_y_scale(channel,height,width,delay,scope,scaleGuess=None)
     time.sleep(0.1)
     
     # If no scale guess, try to find reasonable trigger crossings at each y_scale
+    ct = False
     if scaleGuess==None:
         for i, val in enumerate(_v_div):
-            scope.unlock()
             scope.set_channel_y(channel,_v_div[-1*(i+1)], pos=3) # set scale, starting with largest
             scope.set_edge_trigger( (-1*_v_div[-1*(i+1)]), channel, falling=True)
-            scope.lock()
             if i==0:
-                time.sleep(0.2) # Need to wait to clear previous triggered state
-            ct = scope.acquire_time_check(True) # Wait for triggered acquisition
+                time.sleep(1) # Need to wait to clear previous triggered state
+            ct = scope.acquire_time_check(timeout=.3) # Wait for triggered acquisition
             if ct == True:
                 break
     else: #Else use the guess
@@ -126,25 +122,23 @@ def find_and_set_scope_y_scale(channel,height,width,delay,scope,scaleGuess=None)
             tmp_idx = np.where( np.array(_v_div) >= abs(scaleGuess) )[0][0]
             guess_v_div = _v_div[0:tmp_idx]
         for i, val in enumerate(guess_v_div):
-            scope.unlock()
             scope.set_channel_y(channel,guess_v_div[-1*(i+1)],pos=3) # set scale, starting with largest
             scope.set_edge_trigger( (-1*guess_v_div[-1*(i+1)]), channel, falling=True)
-            scope.lock()
             if i==0:
                 time.sleep(0.2) # Need to wait to clear previous triggered state
-            ct = scope.acquire_time_check(True) # Wait for triggered acquisition
+            ct = scope.acquire_time_check() # Wait for triggered acquisition
             if ct == True:
                 break
 
+    time.sleep(0.5) # Need to wait for scope to recognise new settings
     scope._get_preamble(channel)
-
     # Calc min value
     mini, wave = np.zeros( 10 ), None    
     for i in range( len(mini) ):
         # Check we get a trigger - even at the lowest setting we might see nothing
-        ct = scope.acquire_time_check(True, timeout=1.)
+        ct = scope.acquire_time_check(timeout=.5)
         if ct == False:
-            print 'No triggers for this data point. Will skip and set data to 0.'
+            print 'Triggers missed for this data point. Will skip and set data to 0.'
             return False
         wave = scope.get_waveform(channel)
         mini[i] = min(wave) - np.mean(wave[0:10])
@@ -162,10 +156,8 @@ def find_and_set_scope_y_scale(channel,height,width,delay,scope,scaleGuess=None)
     else:
         trig = -1.*scale
     print "Preticted scale = %1.3fV, actual scale = %1.3fV, trigger @ %1.4fV" % (-1*(min_volt/6.6) , scale, trig)
-    scope.unlock()
     scope.set_channel_y( channel, scale, pos=3) # set scale, starting with largest
     scope.set_edge_trigger( trig, channel, falling=True)
-    scope.lock()
 
     print "TOTAL FUNC TIME = %1.2f s" % (time.time() - func_time)
     sc.stop()
@@ -240,5 +232,4 @@ def sweep(dir_out,box,channel,width,delay,scope,min_volt=None):
         results = return_zero_result()
         results['pin'] = pin[logical_channel]
     sc.stop()
-    scope.unlock()
     return results
