@@ -75,12 +75,12 @@ def save_scopeTraces(fileName, scope, channel, noPulses):
     results = utils.PickleFile(fileName, 1)
     results.add_meta_data("timeform_1", scope.get_timeform(channel))
 
-    ct = scope.acquire_time_check(timeout=0.3)
-    if ct == False:
-        print 'No triggers for this data point. Will skip and set data to 0.'
-        results.save()
-        results.close()
-        return False
+    #ct = scope.acquire_time_check()
+    #if ct == False:
+    #    print 'No triggers for this data point. Will skip and set data to 0.'
+    #    results.save()
+    #    results.close()
+    #    return False
 
     t_start, loopStart = time.time(),time.time()
     for i in range(noPulses):
@@ -136,7 +136,7 @@ def find_and_set_scope_y_scale(channel,height,width,delay,scope,scaleGuess=None)
     mini, wave = np.zeros( 10 ), None    
     for i in range( len(mini) ):
         # Check we get a trigger - even at the lowest setting we might see nothing
-        ct = scope.acquire_time_check(timeout=.5)
+        ct = scope.acquire_time_check(timeout=.4)
         if ct == False:
             print 'Triggers missed for this data point. Will skip and set data to 0.'
             return False
