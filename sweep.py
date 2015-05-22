@@ -5,7 +5,6 @@
 # IPW sweeps with Tek scope
 #
 #########################
-
 import os
 from core import serial_command
 from common import comms_flags

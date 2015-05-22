@@ -78,7 +78,7 @@ def adjust_width(seconds,applied_volts):
         width =  2.355*np.sqrt(((seconds * seconds)/(2.355*2.355))-time_correction*time_correction)
         return width
     except:
-        print 'ERROR: Could not calculate the fall time. Returning 0'
+`        print 'ERROR: Could not calculate the fall time. Returning 0'
         print seconds,time_correction
         return 0
 
