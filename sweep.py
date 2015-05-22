@@ -112,7 +112,7 @@ def find_and_set_scope_y_scale(channel,height,width,delay,scope,scaleGuess=None)
             scope.set_edge_trigger( (-1*_v_div[-1*(i+1)]), channel, falling=True)
             if i==0:
                 time.sleep(1) # Need to wait to clear previous triggered state
-            ct = scope.acquire_time_check(timeout=.3) # Wait for triggered acquisition
+            ct = scope.acquire_time_check(timeout=.5) # Wait for triggered acquisition
             if ct == True:
                 break
     else: #Else use the guess
