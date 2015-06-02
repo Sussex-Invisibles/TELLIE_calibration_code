@@ -51,4 +51,5 @@ Minimum\tMinimum Error\n")
                                             tmpResults["area"], tmpResults["area error"],
                                             tmpResults["peak"], tmpResults["peak error"] ))
 
+        calc.plot_eg_pulses(x,y,100,show=True)
     output_file.close()

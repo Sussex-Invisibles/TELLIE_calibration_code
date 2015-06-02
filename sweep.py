@@ -49,14 +49,14 @@ def set_scope(scope):
         raise Exception("Unknown scope")
 
 def check_dir(dname):
-        """Check if directory exists, create it if it doesn't"""
-        direc = os.path.dirname(dname)
-        try:
-                os.stat(direc)
-        except:
-                os.mkdir(direc)
-                print "Made directory %s...." % dname
-        return dname    
+    """Check if directory exists, create it if it doesn't"""
+    direc = os.path.dirname(dname)
+    try:
+        os.stat(direc)
+    except:
+        os.mkdir(direc)
+        print "Made directory %s...." % dname
+    return dname    
 
 def return_zero_result():
     r = {}
@@ -205,6 +205,7 @@ def sweep(dir_out,box,channel,width,delay,scope,min_volt=None):
     sc.stop()
 
     # File system stuff
+    check_dir("%s/raw_data/" % (dir_out))
     directory = check_dir("%s/raw_data/Channel_%02d/" % (dir_out,logical_channel))
     fname = "%sWidth%05d" % (directory,width)
     

@@ -35,8 +35,10 @@ if __name__=="__main__":
     box = int(options.box)
     channel = int(options.channel)
     cutoff = int(options.cutoff)
+
     #Fixed parameters
     delay = 1.0 # 1ms -> kHz
+    widths = range(cutoff-900,cutoff+301,25)
     
     #run the initial setup on the scope
     usb_conn = scope_connections.VisaUSB()
@@ -51,7 +53,7 @@ if __name__=="__main__":
     x_div_units = 4e-9 # seconds
     y_offset = -2.5*y_div_units # offset in y (2.5 divisions up)
     x_offset = +2*x_div_units # offset in x (2 divisions to the left)
-    record_length = 1e3 # trace is 1e3 samples long
+    record_length = 100e3 # trace is 100e3 samples long
     half_length = record_length / 2 # For selecting region about trigger point
     ###########################################
     scope.unlock()
@@ -69,17 +71,16 @@ if __name__=="__main__":
 
     #Create a new, timestamped, summary file
     timestamp = time.strftime("%y%m%d_%H.%M",time.gmtime())
+    sweep.check_dir('./low_intensity')
     saveDir = sweep.check_dir("low_intensity/Box_%02d/" % (box))
-    output_filename = "%s/%d_IPWlow_%s.dat" % (saveDir,channel,timestamp)
+    output_filename = "%s/Chan%02d_IPWlow_%s.dat" % (saveDir,channel,timestamp)
     #results = utils.PickleFile(output_filename, 1)
     
     output_file = file(output_filename,'w')
     output_file.write("#PWIDTH\tPWIDTH Error\tPIN\tPIN Error\tWIDTH\tWIDTH Error\tRISE\tRISE Error\tFALL\tFALL Error\tAREA\tAREA Error\tMinimum\tMinimum Error\n")
 
     #Start scanning!
-    widths = range(cutoff-500,cutoff+101,100)
     tmpResults = None
-
     t_start = time.time()
     for width in widths:
         min_volt = None
@@ -88,11 +89,10 @@ if __name__=="__main__":
             #set a best guess for the trigger and the scale
             #using the last sweeps value
             min_volt = float(tmpResults["peak"])
+            if min_volt == 0: # If bad data set, make none
+                min_volt = None
         tmpResults = sweep.sweep(saveDir,box,channel,width,delay,scope,min_volt)
                 
-        #results.set_meta_data("area", tmpResults["area"])
-        #results.set_meta_data("area error", tmpResults["area error"])
-
         output_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n"%(width, 0,
                                             tmpResults["pin"], 0,
                                             tmpResults["width"], tmpResults["width error"],
@@ -104,8 +104,6 @@ if __name__=="__main__":
         print "WIDTH %d took : %1.1f s" % (width, time.time()-loopStart)
 
     output_file.close()
-    #results.save()
-    #results.close()
 
     print "Total script time : %1.1f mins"%( (time.time() - total_time) / 60)
     

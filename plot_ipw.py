@@ -50,15 +50,25 @@ def clean_data(res_list):
         if np.isfinite(res_list[i]["fall"]) == False:
             res_list[i]["fall"] = 0
             res_list[i]["fall_err"] = 0
+        if res_list[i]["rise_err"] > res_list[i]["rise"]:
+            res_list[i]["rise"] = 0
+            res_list[i]["rise_err"] = 0
+        if res_list[i]["fall_err"] > res_list[i]["fall"]:
+            res_list[i]["fall"] = 0
+            res_list[i]["fall_err"] = 0
+        if res_list[i]["width_err"] > res_list[i]["width"]:
+            res_list[i]["width"] = 0
+            res_list[i]["width_err"] = 0
     return res_list
 
 def get_gain(applied_volts):
-    """Get the gain from the applied voltage"""
-    gain = None
-    if applied_volts < 0.7:
-        gain = 15460
-    else:
-        gain = 192750
+    """Get the gain from the applied voltage.
+       Constants taken from pmt gain calibration
+       taken May 2015.
+       See smb://researchvols.uscs.susx.ac.uk/research/neutrino_lab/SnoPlus/PmtCal.
+    """
+    a, b = 545.1, 13.65
+    gain = a*np.exp(b*applied_volts)
     return gain
 
 def get_scope_response(applied_volts):
@@ -78,7 +88,7 @@ def adjust_width(seconds,applied_volts):
         width =  2.355*np.sqrt(((seconds * seconds)/(2.355*2.355))-time_correction*time_correction)
         return width
     except:
-`        print 'ERROR: Could not calculate the fall time. Returning 0'
+        print 'ERROR: Could not calculate the fall time. Returning 0'
         print seconds,time_correction
         return 0
 
@@ -123,7 +133,7 @@ def set_style(gr,style=1,title_size=0.04):
         gr.SetMarkerStyle(8)
         gr.SetMarkerSize(0.5)        
 
-def master_plot(fname, ph_ipw, w_ipw, r_ipw, f_ipw, pin_ipw, ph_pin):
+def master_plot(fname, ph_ipw, w_ipw, r_ipw, f_ipw, pin_ipw, ph_pin, cutoff=None):
     # Create nea canvas and split it into four
     nCan = ROOT.TCanvas()
     nCan.Divide(2,2)
@@ -149,6 +159,12 @@ def master_plot(fname, ph_ipw, w_ipw, r_ipw, f_ipw, pin_ipw, ph_pin):
     leg.AddEntry(r_ipw, 'Rise', 'p')
     leg.AddEntry(f_ipw, 'Fall', 'p')
     multi.Draw("AP")
+    if cutoff != None:
+        t = ROOT.TLatex()
+        t.SetNDC()
+        t.SetText(0.65,0.85,"Cutoff = %i"%cutoff)
+        t.SetTextColor(46)
+        t.Draw()
     leg.Draw() 
 
     nCan.cd(3)
@@ -182,9 +198,9 @@ if __name__=="__main__":
 
     voltage = 0
     if sweep_type=="low_intensity":
-        voltage = 0.8
+        voltage = 0.7
     elif sweep_type=="broad_sweep":
-        voltage = 0.6
+        voltage = 0.5
     else:
         raise Exception,"unknown sweep type %s"%(sweep_type)
 
@@ -204,6 +220,7 @@ if __name__=="__main__":
     fall_vs_ipw = ROOT.TGraphErrors()
     pin_vs_ipw = ROOT.TGraphErrors()
 
+    r, ipw = np.zeros(len(res_list)), np.zeros(len(res_list))
     for i in range(len(res_list)):
 
         print "IPW: %04d"%(res_list[i]["ipw"])
@@ -211,13 +228,13 @@ if __name__=="__main__":
         #Plot measured values
         photon = get_photons(res_list[i]["area"],voltage)
         photon_err = get_photons(res_list[i]["area_err"], voltage)
-        rise_time = adjust_rise(res_list[i]["rise"]*1e9,voltage)
+        rise_time = res_list[i]["rise"]*1e9
         rise_time_err = res_list[i]["rise_err"]*1e9
-        fall_time = adjust_rise(res_list[i]["fall"]*1e9,voltage)
+        fall_time = res_list[i]["fall"]*1e9
         fall_time_err = res_list[i]["fall_err"]*1e9
-        width_time = adjust_width(res_list[i]["width"]*1e9,voltage)
+        width_time = res_list[i]["width"]*1e9
         width_time_err = res_list[i]["width_err"]*1e9
-
+        
         pin_vs_ipw.SetPoint(i,res_list[i]["ipw"],res_list[i]["pin"])
 
         photon_vs_pin.SetPoint(i,res_list[i]["pin"],photon)
@@ -236,7 +253,9 @@ if __name__=="__main__":
         width_vs_photon.SetPointError(i,photon_err,width_time_err)
         width_vs_ipw.SetPoint(i,res_list[i]["ipw"],width_time)
         width_vs_ipw.SetPointError(i,res_list[i]["ipw_err"],width_time_err)
-
+        
+        #For Cutoff calc
+        r[i], ipw[i] = rise_time, res_list[i]["ipw"]
 
     set_style(pin_vs_ipw,1)
     set_style(photon_vs_pin,1)
@@ -323,7 +342,10 @@ if __name__=="__main__":
 
     out_dir = os.path.join(sweep_type,"plots/")
     master_name = "%s/Chan%02d_%s.pdf" % (out_dir, logical_channel, sweep_type)
-    master_plot(master_name, photon_vs_ipw, width_vs_ipw, rise_vs_ipw, fall_vs_ipw, pin_vs_ipw, photon_vs_pin)
-
+    if sweep_type == "broad_sweep":
+        cut = ipw[np.nonzero(r)[0][-1]]
+        master_plot(master_name, photon_vs_ipw, width_vs_ipw, rise_vs_ipw, fall_vs_ipw, pin_vs_ipw, photon_vs_pin, cutoff=cut)
+    else:
+        master_plot(master_name, photon_vs_ipw, width_vs_ipw, rise_vs_ipw, fall_vs_ipw, pin_vs_ipw, photon_vs_pin)        
     fout.Close()
 
