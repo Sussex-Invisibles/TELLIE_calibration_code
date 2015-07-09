@@ -38,8 +38,9 @@ if __name__=="__main__":
 
     #Fixed parameters
     delay = 1.0 # 1ms -> kHz
-    widths = range(cutoff-900,cutoff+301,25)
-    
+    widths = range(cutoff-450,cutoff+301,15)
+    #widths = range(cutoff,cutoff+301,25)
+
     #run the initial setup on the scope
     usb_conn = scope_connections.VisaUSB()
     scope = scopes.Tektronix3000(usb_conn)
@@ -53,7 +54,7 @@ if __name__=="__main__":
     x_div_units = 4e-9 # seconds
     y_offset = -2.5*y_div_units # offset in y (2.5 divisions up)
     x_offset = +2*x_div_units # offset in x (2 divisions to the left)
-    record_length = 100e3 # trace is 100e3 samples long
+    record_length = 1e3 # trace is 100e3 samples long
     half_length = record_length / 2 # For selecting region about trigger point
     ###########################################
     scope.unlock()
@@ -90,11 +91,11 @@ if __name__=="__main__":
             #using the last sweeps value
             min_volt = float(tmpResults["peak"])
             if min_volt == 0: # If bad data set, make none
-                min_volt = None
+                min_volt = 50e-3 # Used to be None - Changed for speed-up!
         tmpResults = sweep.sweep(saveDir,box,channel,width,delay,scope,min_volt)
                 
         output_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n"%(width, 0,
-                                            tmpResults["pin"], 0,
+                                            tmpResults["pin"], tmpResults["pin error"],
                                             tmpResults["width"], tmpResults["width error"],
                                             tmpResults["rise"], tmpResults["rise error"],
                                             tmpResults["fall"], tmpResults["fall error"],

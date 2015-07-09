@@ -26,12 +26,13 @@ if __name__=="__main__":
     width = int(options.width)
     channel = (int(options.box)-1)*8 + int(options.channel)
     width = int(options.width)
-    sc = serial_command.SerialCommand("/dev/tty.usbserial-FTGA2OCZ")
+    sc = serial_command.SerialCommand("/dev/tty.usbserial-FTE3C0PG")
     sc.stop()
     sc.select_channel(channel)
     sc.set_pulse_height(16383)
     sc.set_pulse_width(width)
-    sc.set_pulse_delay(1)
+    sc.set_pulse_delay(0.1)
+    #sc.set_pulse_delay(25e-3) 
     try:
         sc.fire_continuous()
         while True:

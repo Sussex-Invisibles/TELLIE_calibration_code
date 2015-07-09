@@ -52,7 +52,7 @@ if __name__=="__main__":
     #y_offset = -2.5*y_div_units # offset in y (2.5 divisions up)
     y_offset = 0.5*y_div_units # offset in y (for UK scope)
     x_offset = +2*x_div_units # offset in x (2 divisions to the left)
-    record_length = 100e3 # trace is 1e3 samples long
+    record_length = 1e3 # trace is 1e3 samples long
     half_length = record_length / 2 # For selecting region about trigger point
     ###########################################
     scope.unlock()
@@ -63,7 +63,8 @@ if __name__=="__main__":
     scope.set_channel_termination(scope_chan, termination)
     scope.set_single_acquisition() # Single signal acquisition mode
     scope.set_record_length(record_length)
-    scope.set_data_mode(half_length-50, half_length+50)
+    scope.set_data_mode(half_length-80, half_length+20)
+    scope.set_edge_trigger(-0.5*y_div_units, scope_chan, falling=True)
     scope.lock()
     scope.begin() # Acquires the pre-amble! 
 
@@ -90,14 +91,14 @@ if __name__=="__main__":
             #using the last sweeps value
             min_volt = float(tmpResults["peak"])
             if min_volt == 0: # If bad data set, make none
-                min_volt = None
+                min_volt = 50e-3 # Used to be None - changed for speed up!
         tmpResults = sweep.sweep(saveDir,box,channel,width,delay,scope,min_volt)
                 
         #results.set_meta_data("area", tmpResults["area"])
         #results.set_meta_data("area error", tmpResults["area error"])
 
         output_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n"%(width, 0,
-                                            tmpResults["pin"], 0,
+                                            tmpResults["pin"], tmpResults["pin error"],
                                             tmpResults["width"], tmpResults["width error"],
                                             tmpResults["rise"], tmpResults["rise error"],
                                             tmpResults["fall"], tmpResults["fall error"],

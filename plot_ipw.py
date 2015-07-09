@@ -21,6 +21,7 @@ import ROOT
 import numpy as np
 import optparse
 import os
+import time 
 
 def read_scope_scan(fname):
     """Read data as read out and stored to text file from the scope.
@@ -38,7 +39,7 @@ def read_scope_scan(fname):
         # Append needs to all be done in one. If we make a dict 'results = {}' which we 
         # re-write and append it fills with all the same object and so we have multiple copies
         # of the same result.
-        resultsList.append({"ipw":int(bits[0]),"ipw_err": int(bits[1]),"pin":int(bits[2]),"pin_err":int(bits[3]),"width":float(bits[4]),"width_err":float(bits[5]),"rise":float(bits[6]),"rise_err":float(bits[7]),"fall":float(bits[8]),"fall_err":float(bits[9]),"area":float(bits[10]),"area_err":float(bits[11]),"mini":float(bits[12]),"mini_err":float(bits[13])})
+        resultsList.append({"ipw":int(bits[0]),"ipw_err": int(bits[1]),"pin":int(bits[2]),"pin_err":float(bits[3]),"width":float(bits[4]),"width_err":float(bits[5]),"rise":float(bits[6]),"rise_err":float(bits[7]),"fall":float(bits[8]),"fall_err":float(bits[9]),"area":float(bits[10]),"area_err":float(bits[11]),"mini":float(bits[12]),"mini_err":float(bits[13])})
     return resultsList
 
 def clean_data(res_list):
@@ -50,6 +51,9 @@ def clean_data(res_list):
         if np.isfinite(res_list[i]["fall"]) == False:
             res_list[i]["fall"] = 0
             res_list[i]["fall_err"] = 0
+        if np.isfinite(res_list[i]["width"]) == False:
+            res_list[i]["width"] = 0
+            res_list[i]["width_err"] = 0
         if res_list[i]["rise_err"] > res_list[i]["rise"]:
             res_list[i]["rise"] = 0
             res_list[i]["rise_err"] = 0
@@ -59,16 +63,20 @@ def clean_data(res_list):
         if res_list[i]["width_err"] > res_list[i]["width"]:
             res_list[i]["width"] = 0
             res_list[i]["width_err"] = 0
+        if res_list[i]["width"] < 4e-9 or res_list[i]["width_err"] > 1.5e-9:
+            res_list[i]["width"] = 0
+            res_list[i]["width_err"] = 0
     return res_list
 
 def get_gain(applied_volts):
     """Get the gain from the applied voltage.
        Constants taken from pmt gain calibration
-       taken May 2015.
+       taken July 2015 at site.
        See smb://researchvols.uscs.susx.ac.uk/research/neutrino_lab/SnoPlus/PmtCal.
     """
-    a, b = 545.1, 13.65
-    gain = a*np.exp(b*applied_volts)
+    a, b, c = 2.432, 12.86, -237.5
+    #a, b, c = 545.1, 13.65, 0
+    gain = a*np.exp(b*applied_volts) + c
     return gain
 
 def get_scope_response(applied_volts):
@@ -109,11 +117,10 @@ def get_photons(volts_seconds,applied_volts):
     Can accept -ve or +ve pulse
     """
     impedence = 50.0 
-    eV = 1.602e-19
-    qe = 0.192 # @ 488nm
+    eV = (6.626e-34 * 3e8) / (500e-9)
+    qe = 0.192 # @ 501nm
     gain = get_gain(applied_volts)
-    photons = np.fabs(volts_seconds) / (impedence * eV * gain)
-    photons /= qe
+    photons = np.fabs(volts_seconds) / (impedence * eV * gain * qe)
     return photons
 
 def set_style(gr,style=1,title_size=0.04):
@@ -176,7 +183,7 @@ def master_plot(fname, ph_ipw, w_ipw, r_ipw, f_ipw, pin_ipw, ph_pin, cutoff=None
     ph_pin.Draw("AP")
 
     nCan.Print(fname)    
-    
+    return nCan
     
 if __name__=="__main__":
     parser = optparse.OptionParser()
@@ -196,7 +203,7 @@ if __name__=="__main__":
     logical_channel = (box-1) * 8 + channel
     print sweep_type, file_name, box, channel, logical_channel
 
-    voltage = 0
+    Voltage = 0
     if sweep_type=="low_intensity":
         voltage = 0.7
     elif sweep_type=="broad_sweep":
@@ -220,10 +227,10 @@ if __name__=="__main__":
     fall_vs_ipw = ROOT.TGraphErrors()
     pin_vs_ipw = ROOT.TGraphErrors()
 
-    r, ipw = np.zeros(len(res_list)), np.zeros(len(res_list))
+    w, ipw = np.zeros(len(res_list)), np.zeros(len(res_list))
     for i in range(len(res_list)):
 
-        print "IPW: %04d"%(res_list[i]["ipw"])
+        #print "IPW: %04d"%(res_list[i]["ipw"])
 
         #Plot measured values
         photon = get_photons(res_list[i]["area"],voltage)
@@ -236,6 +243,7 @@ if __name__=="__main__":
         width_time_err = res_list[i]["width_err"]*1e9
         
         pin_vs_ipw.SetPoint(i,res_list[i]["ipw"],res_list[i]["pin"])
+        pin_vs_ipw.SetPointError(i,0,res_list[i]["pin_err"])
 
         photon_vs_pin.SetPoint(i,res_list[i]["pin"],photon)
         photon_vs_pin.SetPointError(i,res_list[i]["pin_err"],photon_err)
@@ -255,8 +263,8 @@ if __name__=="__main__":
         width_vs_ipw.SetPointError(i,res_list[i]["ipw_err"],width_time_err)
         
         #For Cutoff calc
-        r[i], ipw[i] = rise_time, res_list[i]["ipw"]
-
+        w[i], ipw[i] = width_time, res_list[i]["ipw"]
+        #print w[i], rise_time, fall_time
     set_style(pin_vs_ipw,1)
     set_style(photon_vs_pin,1)
     set_style(photon_vs_ipw,1)
@@ -341,11 +349,13 @@ if __name__=="__main__":
     fall_vs_ipw.Write()
 
     out_dir = os.path.join(sweep_type,"plots/")
-    master_name = "%s/Chan%02d_%s.pdf" % (out_dir, logical_channel, sweep_type)
+    master_name = "%sChan%02d_%s.pdf" % (out_dir, logical_channel, sweep_type)
     if sweep_type == "broad_sweep":
-        cut = ipw[np.nonzero(r)[0][-1]]
-        master_plot(master_name, photon_vs_ipw, width_vs_ipw, rise_vs_ipw, fall_vs_ipw, pin_vs_ipw, photon_vs_pin, cutoff=cut)
+        cut = ipw[np.nonzero(w)[0][-1]]
+        tmpCan = master_plot(master_name, photon_vs_ipw, width_vs_ipw, rise_vs_ipw, fall_vs_ipw, pin_vs_ipw, photon_vs_pin, cutoff=cut)
     else:
-        master_plot(master_name, photon_vs_ipw, width_vs_ipw, rise_vs_ipw, fall_vs_ipw, pin_vs_ipw, photon_vs_pin)        
+        tmpCan = master_plot(master_name, photon_vs_ipw, width_vs_ipw, rise_vs_ipw, fall_vs_ipw, pin_vs_ipw, photon_vs_pin)        
     fout.Close()
 
+    time.sleep(2)
+    os.system("open %s"% master_name)  
