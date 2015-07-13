@@ -80,6 +80,7 @@ if __name__=="__main__":
 
     #Start scanning!
     widths = range(0,9000,step)
+    #widths = range(0,12000,step)
     tmpResults = None
 
     t_start = time.time()

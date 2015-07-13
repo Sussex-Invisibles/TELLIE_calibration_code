@@ -38,8 +38,8 @@ if __name__=="__main__":
 
     #Fixed parameters
     delay = 1.0 # 1ms -> kHz
-    widths = range(cutoff-450,cutoff+301,15)
-    #widths = range(cutoff,cutoff+301,25)
+    widths = range(cutoff-450,cutoff+361,15)
+    #widths = range(cutoff-900,cutoff+601,30)
 
     #run the initial setup on the scope
     usb_conn = scope_connections.VisaUSB()

@@ -63,7 +63,7 @@ def clean_data(res_list):
         if res_list[i]["width_err"] > res_list[i]["width"]:
             res_list[i]["width"] = 0
             res_list[i]["width_err"] = 0
-        if res_list[i]["width"] < 4e-9 or res_list[i]["width_err"] > 1.5e-9:
+        if res_list[i]["width"] < 3.5e-9 or res_list[i]["width_err"] > 1.5e-9:
             res_list[i]["width"] = 0
             res_list[i]["width_err"] = 0
     return res_list
