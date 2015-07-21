@@ -126,7 +126,7 @@ def get_photons(volts_seconds,applied_volts):
 def set_style(gr,style=1,title_size=0.04):
     gr.GetXaxis().SetTitleSize(title_size)
     gr.GetYaxis().SetTitleSize(title_size)
-    gr.GetYaxis().SetTitleOffset(1.3)
+    gr.GetYaxis().SetTitleOffset(1.1)
     if style==1:
         gr.SetMarkerStyle(8)
         gr.SetMarkerSize(0.5)
