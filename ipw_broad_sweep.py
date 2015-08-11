@@ -79,8 +79,8 @@ if __name__=="__main__":
     output_file.write("#PWIDTH\tPWIDTH Error\tPIN\tPIN Error\tWIDTH\tWIDTH Error\tRISE\tRISE Error\tFALL\tFALL Error\tAREA\tAREA Error\tMinimum\tMinimum Error\n")
 
     #Start scanning!
-    widths = range(0,9000,step)
-    #widths = range(0,12000,step)
+    #widths = range(0,9000,step)
+    widths = range(0,10000,step)
     tmpResults = None
 
     t_start = time.time()
