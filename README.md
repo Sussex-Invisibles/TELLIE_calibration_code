@@ -21,10 +21,10 @@ This script generates a calibration data set by varying the TELLIE pulse width (
 This file contains custom fuctions called by both ipw_broad_sweep.py and ipw_low_sweep.py scripts.
 
 ### plot_ipw.py
-Plotting functions for datasets produced by both ipw_broad_sweep.py and ipw_low_sweep.py. Plots are stored as both TFiles and .pdfs for quick reference under broad_sweep/plots and low_intensity/plots for the broad and low sweeps respectively. 
+Plotting functions for datasets produced by both ipw_broad_sweep.py and ipw_low_sweep.py. Plots are stored as both TFiles and .pdfs for quick reference under broad_sweep/plots and low_intensity/plots for the broad and low sweep data sets respectively. 
 
 ### pulse_continuous.py
-This script causes a TELLIE channel to fire at maximum intensity (IPW = 0), continuously. This script is used to give a constant, updating signal when setting up the PIN diode amplifier. A user can select a box and channel within that box with the -b and -c flags respectively. 
+This script causes a TELLIE channel to fire at maximum intensity (IPW = 0), continuously. This functionality is used to produce a constant, updating signal when setting up the PIN diode amplifier. A user can select a box and channel within that box to be fired with the -b and -c flags respectively. 
 
 ### calc_response.py
 This script fits the most recent data sets for each channel and returns a .csv file with the results. Results include parameters of linear fits to the PIN diode response as a function of incident photons, and parameters of a quadratic fit to the photon output as a function of IPW setting. 
