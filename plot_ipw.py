@@ -196,12 +196,24 @@ if __name__=="__main__":
         sys.exit()
 
     p =  options.file.split('/')
-    sweep_type = p[0]
-    file_name = p[1]
-    box = int(p[1][-2:])
-    channel = int(p[2][4:6])
-    logical_channel = (box-1) * 8 + channel
-    print sweep_type, file_name, box, channel, logical_channel
+    if len(p) == 3:
+        sweep_type = p[0]
+        file_name = p[1]
+        box = int(p[1][-2:])
+        channel = int(p[2][4:6])
+        logical_channel = (box-1) * 8 + channel
+        dirname = os.path.join(sweep_type,"plots/channel_%02d"%logical_channel)
+        out_dir = os.path.join(sweep_type, "plots/")
+        print sweep_type, file_name, box, channel, logical_channel
+    elif len(p) == 4:
+        sweep_type = p[1]
+        file_name = p[2]
+        box = int(p[2][-2:])
+        channel = int(p[3][4:6])
+        logical_channel = (box-1) * 8 + channel
+        dirname = os.path.join("%s/%s/plots/channel_%02d"%(p[0],sweep_type,logical_channel))
+        out_dir = os.path.join("%s/%s/plots/"%(p[0],sweep_type))
+        print p[0], sweep_type, file_name, box, channel, logical_channel
 
     Voltage = 0
     if sweep_type=="low_intensity":
@@ -210,8 +222,6 @@ if __name__=="__main__":
         voltage = 0.5
     else:
         raise Exception,"unknown sweep type %s"%(sweep_type)
-
-    dirname = os.path.join(sweep_type,"plots/channel_%02d"%logical_channel)
 
     res_list = read_scope_scan(options.file)
     res_list = clean_data(res_list)
@@ -348,7 +358,6 @@ if __name__=="__main__":
     fall_vs_photon.Write()
     fall_vs_ipw.Write()
 
-    out_dir = os.path.join(sweep_type,"plots/")
     master_name = "%sChan%02d_%s.pdf" % (out_dir, logical_channel, sweep_type)
     if sweep_type == "broad_sweep":
         cut = ipw[np.nonzero(w)[0][-1]]

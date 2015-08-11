@@ -84,6 +84,7 @@ def save_scopeTraces(fileName, scope, channel, noPulses):
     t_start, loopStart = time.time(),time.time()
     for i in range(noPulses):
         try:
+            ct = scope.acquire_time_check(timeout=.4)
             results.add_data(scope.get_waveform(channel), 1)
         except Exception, e:
             print "Scope died, acquisition lost."
@@ -177,7 +178,7 @@ def sweep(dir_out,box,channel,width,delay,scope,min_volt=None):
     height = 16383    
     fibre_delay = 0
     trigger_delay = 0
-    pulse_number = 1000
+    pulse_number = 100
     #first select the correct channel and provide settings
     logical_channel = (box-1)*8 + channel
     
