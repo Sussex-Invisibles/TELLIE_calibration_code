@@ -45,12 +45,12 @@ def return_files(base, box):
             mostRecentFiles.append("%s%s" %(base_path, find_most_recent_file(filesForChan)))
     return mostRecentFiles
   
-def return_boxes():
+def return_boxes(path):
     '''Find which boxes we have data for.
     '''
     box = []
     for i in range(1,13,1):
-        if os.path.exists("low_intensity/Box_%02d"%i):
+        if os.path.exists("%s/Box_%02d"%(path, i)):
             box.append(i)
     return box
 
@@ -113,8 +113,11 @@ def channel_results_dict(chan, ipwFit, pinFit, pinPlot):
     ################
     # Add parameters
     test_results["ipw_p0"] = ipwFit.GetParameter(0)
+    test_results["ipw_p0_err"] = ipwFit.GetParError(0)
     test_results["ipw_p1"] = ipwFit.GetParameter(1)
+    test_results["ipw_p1_err"] = ipwFit.GetParError(1)
     test_results["ipw_p2"] = ipwFit.GetParameter(2)
+    test_results["ipw_p2_err"] = ipwFit.GetParError(2)
     # Check reducedChi2 is not too large - fit isn't great so set arbitraty = 15 limit.
     chi2 = ipwFit.GetChisquare() / ipwFit.GetNDF()
     test_results["ipwChi2"] = chi2
@@ -127,16 +130,17 @@ def channel_results_dict(chan, ipwFit, pinFit, pinPlot):
     ################
     # Add parameters
     test_results["pin_p0"] = pinFit.GetParameter(0)
+    test_results["pin_p0_err"] = pinFit.GetParError(0)
     test_results["pin_p1"] = pinFit.GetParameter(1)
+    test_results["pin_p1_err"] = pinFit.GetParError(1)
     # Check PIN response linearity, again fit isn't ideal. Use redChi2 < 2.5
     pinChi2 = pinFit.GetChisquare() / pinFit.GetNDF()
     test_results["pinChi2"] = pinChi2
     # PIN saturation 
-    x_buff, y_buff, N = pinPlot.GetX(), pinPlot.GetY(), pinPlot.GetN()
-    x_buff.SetSize(N), y_buff.SetSize(N)
-    xarr, yarr = np.array(x_buff,copy=True), np.array(y_buff,copy=True)
+    xarr, yarr = get_xy(pinPlot)
     test_results["pinSaturation"] = yarr[np.where(xarr == max(xarr))[0][0]]
     # Get pin rms on smallest photon measure
+    N=pinPlot.GetN()
     rms = pinPlot.GetErrorX(N-1)*np.sqrt(100) # Needs to be scaled back
     test_results["PINrms"] = rms
     # Maximum photon output for this channel
@@ -146,15 +150,16 @@ def channel_results_dict(chan, ipwFit, pinFit, pinPlot):
 
 if __name__ == "__main__":
     parser = optparse.OptionParser()
-    #parser.add_option("-b", dest="box", default="all")
+    parser.add_option("-d", dest="direc", default="./")
     (options,args) = parser.parse_args()
-
+    
     ROOT.gStyle.SetOptFit(1111) # Formatting for fit parameters
     ROOT.TGaxis.SetMaxDigits(4) # Axis formatting
 
-    if not os.path.exists("fits"):
-        os.makedirs("fits")
-    fout = ROOT.TFile("fits/rootFiles.root","recreate")
+    rootDirec = options.direc
+    if not os.path.exists("%s/fits"%rootDirec):
+        os.makedirs("%s/fits"%rootDirec)
+    fout = ROOT.TFile("%s/fits/rootFiles.root"%rootDirec,"recreate")
     ipwCan = ROOT.TCanvas()
     pinCan = ROOT.TCanvas()
     ipwCan.SetCanvasSize(1000,400)
@@ -164,10 +169,10 @@ if __name__ == "__main__":
     
     # Loop over all data using standarised directory structure
     resultsList = []
-    boxes = return_boxes()
+    boxes = return_boxes("%s/broad_sweep/"%rootDirec)
     for box in boxes:
-        broadFiles = return_files("broad_sweep", box)
-        lowFiles = return_files("low_intensity", box)
+        broadFiles = return_files("%s/broad_sweep"%rootDirec, box)
+        lowFiles = return_files("%s/low_intensity"%rootDirec, box)
         for j in range(len(lowFiles)):
             broadVals = check_data(plot_ipw.read_scope_scan(broadFiles[j]))
             lowVals = check_data(plot_ipw.read_scope_scan(lowFiles[j]))
@@ -184,14 +189,18 @@ if __name__ == "__main__":
                 # Note: Data points are returned as mean and stdev(rms)
                 #       for fitting, uncertainties should be given as standard error. 
                 photonVsPIN_broad.SetPoint(i,broadVals[i]["pin"],photonBroad)
-                photonVsPIN_broad.SetPointError(i,broadVals[i]["pin_err"]/np.sqrt(1),photonErrBroad/np.sqrt(1))
+                #photonVsPIN_broad.SetPointError(i,broadVals[i]["pin_err"]/np.sqrt(1),photonErrBroad/np.sqrt(1))
+                photonVsPIN_broad.SetPointError(i,0,photonErrBroad/np.sqrt(1))
+
                 photonVsIPW_broad.SetPoint(i,broadVals[i]["ipw"],photonBroad)
                 photonVsIPW_broad.SetPointError(i,0,photonErrBroad/np.sqrt(1))
                 if i < len(lowVals):
                     photonLow = plot_ipw.get_photons(lowVals[i]["area"], 0.7)
                     photonErrLow = plot_ipw.get_photons(lowVals[i]["area_err"], 0.7)
                     photonVsPIN_low.SetPoint(i,lowVals[i]["pin"],photonLow)
-                    photonVsPIN_low.SetPointError(i,lowVals[i]["pin_err"]/np.sqrt(1),photonErrLow/np.sqrt(1))
+                    #photonVsPIN_low.SetPointError(i,lowVals[i]["pin_err"]/np.sqrt(1),photonErrLow/np.sqrt(1))
+                    photonVsPIN_low.SetPointError(i,0,photonErrLow/np.sqrt(1))
+
                     photonVsIPW_low.SetPoint(i,lowVals[i]["ipw"],photonLow)
                     photonVsIPW_low.SetPointError(i,0,photonErrLow/np.sqrt(1))
             # Add titles, labels and styling
@@ -230,7 +239,7 @@ if __name__ == "__main__":
             chanResDict = channel_results_dict(chan, ipwFit, pinFit, photonVsPIN_broad)
             resultsList.append(chanResDict)
             # Save
-            pdf_dir = "fits/pdfs"
+            pdf_dir = "%s/fits/pdfs"%rootDirec
             if not os.path.exists(pdf_dir):
                 os.makedirs(pdf_dir)
             pinCan.Print("%s/Chan%02d_PIN.pdf"%(pdf_dir,logical_channel))
@@ -243,7 +252,7 @@ if __name__ == "__main__":
             #break
         #break
     # Save results list to file
-    with open('resultsOverview.csv', 'wb') as f:
+    with open('%s/resultsOverview.csv'%rootDirec, 'wb') as f:
         w = csv.DictWriter(f, resultsList[0].keys())
         w.writeheader()
         w.writerows(resultsList)
