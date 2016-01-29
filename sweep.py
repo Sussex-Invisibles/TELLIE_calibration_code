@@ -153,10 +153,15 @@ def find_and_set_scope_y_scale(channel,height,width,delay,scope,scaleGuess=None)
     else: 
         scale_idx = np.where( np.array(_v_div_1) >= -1*(min_volt/6) )[0][0]
         scale = _v_div_1[scale_idx]
+    # Because of baseline noise!
     if scale == 2e-3:
-        trig = -4e-3
+        trig = -7.5e-3
+        #trig = -4e-3
     elif scale == 1e-3:
-        trig = -3e-3
+        trig = -7.5e-3
+        #trig = -3e-3
+    elif scale == 5e-3:
+        trig = -7.5e-3
     else:
         trig = -1.*scale
     print "Preticted scale = %1.3fV, actual scale = %1.3fV, trigger @ %1.4fV" % (-1*(min_volt/6.6) , scale, trig)

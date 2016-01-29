@@ -189,20 +189,20 @@ if __name__ == "__main__":
                 # Note: Data points are returned as mean and stdev(rms)
                 #       for fitting, uncertainties should be given as standard error. 
                 photonVsPIN_broad.SetPoint(i,broadVals[i]["pin"],photonBroad)
-                #photonVsPIN_broad.SetPointError(i,broadVals[i]["pin_err"]/np.sqrt(1),photonErrBroad/np.sqrt(1))
-                photonVsPIN_broad.SetPointError(i,0,photonErrBroad/np.sqrt(1))
+                photonVsPIN_broad.SetPointError(i,broadVals[i]["pin_err"]/np.sqrt(100),photonErrBroad/np.sqrt(100))
+                #photonVsPIN_broad.SetPointError(i,0,photonErrBroad/np.sqrt(1))
 
                 photonVsIPW_broad.SetPoint(i,broadVals[i]["ipw"],photonBroad)
-                photonVsIPW_broad.SetPointError(i,0,photonErrBroad/np.sqrt(1))
+                photonVsIPW_broad.SetPointError(i,0,photonErrBroad/np.sqrt(100))
                 if i < len(lowVals):
                     photonLow = plot_ipw.get_photons(lowVals[i]["area"], 0.7)
                     photonErrLow = plot_ipw.get_photons(lowVals[i]["area_err"], 0.7)
                     photonVsPIN_low.SetPoint(i,lowVals[i]["pin"],photonLow)
-                    #photonVsPIN_low.SetPointError(i,lowVals[i]["pin_err"]/np.sqrt(1),photonErrLow/np.sqrt(1))
-                    photonVsPIN_low.SetPointError(i,0,photonErrLow/np.sqrt(1))
+                    photonVsPIN_low.SetPointError(i,lowVals[i]["pin_err"]/np.sqrt(100),photonErrLow/np.sqrt(100))
+                    #photonVsPIN_low.SetPointError(i,0,photonErrLow/np.sqrt(1))
 
                     photonVsIPW_low.SetPoint(i,lowVals[i]["ipw"],photonLow)
-                    photonVsIPW_low.SetPointError(i,0,photonErrLow/np.sqrt(1))
+                    photonVsIPW_low.SetPointError(i,0,photonErrLow/np.sqrt(100))
             # Add titles, labels and styling
             logical_channel = (int(lowFiles[j][-33:-31])-1)*8 + int(lowFiles[j][-26:-24])
             photonVsPIN_broad.SetName("Chan%02d_PIN_broad"%logical_channel)

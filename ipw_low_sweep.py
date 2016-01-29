@@ -39,7 +39,7 @@ if __name__=="__main__":
     #Fixed parameters
     delay = 1.0 # 1ms -> kHz
     widths = range(cutoff-450,cutoff+361,15)
-    #widths = range(cutoff-900,cutoff+601,30)
+    #widths = range(cutoff-250,cutoff+601,15)
 
     #run the initial setup on the scope
     usb_conn = scope_connections.VisaUSB()
@@ -72,8 +72,8 @@ if __name__=="__main__":
 
     #Create a new, timestamped, summary file
     timestamp = time.strftime("%y%m%d_%H.%M",time.gmtime())
-    sweep.check_dir('./low_intensity')
-    saveDir = sweep.check_dir("low_intensity/Box_%02d/" % (box))
+    sweep.check_dir('./box_comparison/low_intensity')
+    saveDir = sweep.check_dir("./box_comparison/low_intensity/Box_%02d/" % (box))
     output_filename = "%s/Chan%02d_IPWlow_%s.dat" % (saveDir,channel,timestamp)
     #results = utils.PickleFile(output_filename, 1)
     
