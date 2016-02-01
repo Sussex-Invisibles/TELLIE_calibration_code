@@ -101,7 +101,7 @@ def get_xy(plot):
     y_buff.SetSize(N)
     return np.array(x_buff,copy=True), np.array(y_buff,copy=True)
 
-def channel_results_dict(chan, ipwFit, pinFit, pinPlot):
+def channel_results_dict(chan, ipwFit, pinFit, pinPlot, time_str):
     '''A few checks so we can flag unusual channels
     '''
     ipwPars, pinPars = ipwFit.GetParameters(), pinFit.GetParameters()
@@ -145,6 +145,15 @@ def channel_results_dict(chan, ipwFit, pinFit, pinPlot):
     test_results["PINrms"] = rms
     # Maximum photon output for this channel
     test_results["maxPhotonOutput"] = max(yarr)
+    #TIME STAMP
+    #converting time stamp to (roughly) the number of minutes since 01/01/2000
+    numMins = (int(time_str[:2])*365*24*60)
+    numMins += ((int)(time_str[2:4])*30*24*60)
+    print time_str[2:4]
+    numMins += ((int)( time_str[4:6])*24*60)
+    numMins += ((int)( time_str[7:9])*60)
+    numMins += ((int)( time_str[10:12]))
+    test_results["run_time"] = numMins
     return test_results
 
 
@@ -205,6 +214,7 @@ if __name__ == "__main__":
                     photonVsIPW_low.SetPointError(i,0,photonErrLow/np.sqrt(100))
             # Add titles, labels and styling
             logical_channel = (int(lowFiles[j][-33:-31])-1)*8 + int(lowFiles[j][-26:-24])
+            time_str = lowFiles[j][-16:-4]
             photonVsPIN_broad.SetName("Chan%02d_PIN_broad"%logical_channel)
             photonVsPIN_broad.GetXaxis().SetTitle("PIN reading (16 bit)")
             photonVsPIN_broad.GetYaxis().SetTitle("No. photons")
@@ -236,7 +246,7 @@ if __name__ == "__main__":
             ipwCan.Update(); pinCan.Update()
             # Results
             chan = int(lowFiles[j][-25]) + (box-1)*8
-            chanResDict = channel_results_dict(chan, ipwFit, pinFit, photonVsPIN_broad)
+            chanResDict = channel_results_dict(chan, ipwFit, pinFit, photonVsPIN_broad,time_str)
             resultsList.append(chanResDict)
             # Save
             pdf_dir = "%s/fits/pdfs"%rootDirec

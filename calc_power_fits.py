@@ -157,7 +157,14 @@ def channel_results_dict(chan, ipwFit, pinFit, pinPlot,time_str):
     # Maximum photon output for this channel
     test_results["maxPhotonOutput"] = max(yarr)
     #TIME STAMP
-    test_results["run_time"] = time_str
+    #converting time stamp to (roughly) the number of minutes since 01/01/2000
+    numMins = (int(time_str[:2])*365*24*60)
+    numMins += ((int)(time_str[2:4])*30*24*60)
+    print time_str[2:4]
+    numMins += ((int)( time_str[4:6])*24*60)
+    numMins += ((int)( time_str[7:9])*60)
+    numMins += ((int)( time_str[10:12]))
+    test_results["run_time"] = numMins
     return test_results
 
 
