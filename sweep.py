@@ -97,6 +97,38 @@ def save_scopeTraces(fileName, scope, channel, noPulses):
     results.close()
     return True
 
+def save_scopeTraces_Multiple(fileNames, scope, channels, noPulses):
+    """Save a number of scope traces to file - uses compressed .pkl"""
+    results = []
+    for i in range(len(fileNames)):
+	    scope._get_preamble(channels[i])
+	    results.append(utils.PickleFile(fileNames[i], 1))
+	    results[i].add_meta_data("timeform_1", scope.get_timeform(channels[i]))
+
+    #ct = scope.acquire_time_check()
+    #if ct == False:
+    #    print 'No triggers for this data point. Will skip and set data to 0.'
+    #    results.save()
+    #    results.close()
+    #    return False
+
+    t_start, loopStart = time.time(),time.time()
+    for i in range(noPulses):
+        try:
+            ct = scope.acquire_time_check(timeout=.4)
+            for j in range(len(results)):
+		    results[j].add_data(scope.get_waveform(channels[j]), 1)
+        except Exception, e:
+            print "Scope died, acquisition lost."
+            print e
+        if i % 100 == 0 and i > 0:
+            print "%d traces collected - This loop took : %1.1f s" % (i, time.time()-loopStart)
+            loopStart = time.time()
+    print "%d traces collected TOTAL - took : %1.1f s" % (i, (time.time()-t_start))
+    for i in range(len(results)):
+	    results[i].save()
+    return True
+
 def find_and_set_scope_y_scale(channel,height,width,delay,scope,scaleGuess=None):
     """Finds best y_scaling for current pulses
     """
@@ -221,6 +253,7 @@ def sweep(dir_out,box,channel,width,delay,scope,min_volt=None):
     
     # Check scope
     ck = find_and_set_scope_y_scale(1,height,width,delay,scope,scaleGuess=min_volt)
+
     if ck == True:
         print "Saving raw files to: %s..." % fname
         sc.fire_continuous()
@@ -245,3 +278,69 @@ def sweep(dir_out,box,channel,width,delay,scope,min_volt=None):
         results["pin error"] = rms[logical_channel]
     sc.stop()
     return results
+
+
+
+
+
+def sweep_timing(dir_out,box,channel,width,delay,scope,min_volt=None):
+    """Perform a measurement using a default number of
+    pulses, with user defined width, channel and rate settings.
+    """
+    print '____________________________'
+    print width
+
+    #fixed options
+    height = 16383    
+    fibre_delay = 0
+    trigger_delay = 0
+    pulse_number = 11100 
+    #first select the correct channel and provide settings
+    logical_channel = (box-1)*8 + channel
+    
+    sc.select_channel(logical_channel)
+    sc.set_pulse_width(width)
+    sc.set_pulse_height(16383)
+    sc.set_pulse_number(pulse_number)
+    sc.set_pulse_delay(delay)
+    sc.set_fibre_delay(fibre_delay)
+    sc.set_trigger_delay(trigger_delay)
+    
+    # first, run a single acquisition with a forced trigger, effectively to clear the waveform
+    scope._connection.send("trigger:state ready")
+    time.sleep(0.1)
+    scope._connection.send("trigger force")
+    time.sleep(0.1)
+
+    # Get pin read
+    time.sleep(0.1)
+    sc.fire_sequence() # previously fire_sequence!
+    #wait for the sequence to end
+    tsleep = pulse_number * (delay*1e-3 + 210e-6)
+    time.sleep(tsleep) #add the offset in
+    sc.stop()
+
+    # File system stuff
+    check_dir("%s/raw_data/" % (dir_out))
+    directory = check_dir("%s/raw_data/Channel_%02d/" % (dir_out,logical_channel))
+    channels = [1,4]
+    fnames = []
+    fnames.append("%sPMTPulseWidth%05d" % (directory,width))
+    fnames.append("%sTriggerPulseWidth%05d" % (directory,width))
+    
+    # Check scope
+    ck = find_and_set_scope_y_scale(1,height,width,delay,scope,scaleGuess=min_volt)
+    scope.set_edge_trigger(1.4, 4 , falling=False) # Rising edge trigger 
+    if ck == True:
+        print "Saving raw files to: %s and %s" % (fnames[0],fnames[1])
+        sc.fire_continuous()
+        time.sleep(0.2)
+        save_ck = save_scopeTraces_Multiple(fnames, scope, channels, 100)
+        sc.stop()
+        time.sleep(5)
+        if save_ck == True:
+            # Calc and return params
+            xPMT,yPMT = calc.readPickleChannel(fnames[0], 1)
+            xTrigger,yTrigger = calc.readPickleChannel(fnames[1], 1)
+            meanJitter, JitterDev, JitterErrorOnMean = calc.calcJitter(xTrigger,yTrigger,xPMT,yPMT)
+    return meanJitter, JitterErrorOnMean 

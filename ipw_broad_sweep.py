@@ -70,8 +70,8 @@ if __name__=="__main__":
 
     #Create a new, timestamped, summary file
     timestamp = time.strftime("%y%m%d_%H.%M",time.gmtime())
-    saveDir = sweep.check_dir("./box_comparison/broad_sweep/")
-    saveDir = sweep.check_dir("./box_comparison/broad_sweep/Box_%02d/" % (box))
+    saveDir = sweep.check_dir("./April_19/broad_sweep/")
+    saveDir = sweep.check_dir("./April_19/broad_sweep/Box_%02d/" % (box))
     sweep.check_dir("%sraw_data/" % saveDir)
     output_filename = "%s/Chan%02d_IPWbroad_%s.dat" % (saveDir,channel,timestamp)
     #results = utils.PickleFile(output_filename, 1)

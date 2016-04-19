@@ -72,8 +72,8 @@ if __name__=="__main__":
 
     #Create a new, timestamped, summary file
     timestamp = time.strftime("%y%m%d_%H.%M",time.gmtime())
-    sweep.check_dir('./box_comparison/low_intensity')
-    saveDir = sweep.check_dir("./box_comparison/low_intensity/Box_%02d/" % (box))
+    sweep.check_dir('./April_19/low_intensity')
+    saveDir = sweep.check_dir("./April_19/low_intensity/Box_%02d/" % (box))
     output_filename = "%s/Chan%02d_IPWlow_%s.dat" % (saveDir,channel,timestamp)
     #results = utils.PickleFile(output_filename, 1)
     
