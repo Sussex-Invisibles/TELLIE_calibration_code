@@ -30,7 +30,8 @@ def return_files(base, box):
     '''Return an array containing the most up-to-date data files for a given box and sweep type
     '''
     base_path = "%s/Box_%02d/" % (base, box)
-    allFiles = [ f for f in os.listdir(base_path) if os.path.isfile(os.path.join(base_path,f)) ]
+    allFiles = [ f for f in os.listdir(base_path) if os.path.isfile(os.path.join(base_path,f)) and not f.startswith(".") and f.endswith(".dat")]
+    print allFiles
     mostRecentFiles = []
     for i in range(1,9,1):
         filesForChan = []
@@ -191,7 +192,8 @@ if __name__ == "__main__":
     resultsList = []
     boxes = return_boxes("%s/low_intensity/"%rootDirec)
     for box in boxes:
-        lowFiles = return_all_files("%s/low_intensity"%rootDirec, box)
+        #lowFiles = return_all_files("%s/low_intensity"%rootDirec, box)
+        lowFiles = return_files("%s/low_intensity"%rootDirec, box)
         for j in range(len(lowFiles)):
             lowVals = check_data(plot_ipw.read_scope_scan(lowFiles[j]))
             # Creat plots
