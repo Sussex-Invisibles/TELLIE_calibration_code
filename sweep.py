@@ -19,15 +19,15 @@ import readPklWaveFile
 import calc_utils as calc
 import numpy as np
 
-port_name = "/dev/tty.usbserial-FTE3C0PG"
-#port_name = "/dev/tty.usbserial-FTGA2OCZ"
+#port_name = "/dev/tty.usbserial-FTE3C0PG"
+port_name = "/dev/tty.usbserial-FTGA2OCZ"
 ## TODO: better way of getting the scope type
 scope_name = "Tektronix3000"
 _boundary = [0,1.5e-3,3e-3,7e-3,15e-3,30e-3,70e-3,150e-3,300e-3,700e-3,1000]
-_v_div = [1e-3,2e-3,5e-3,10e-3,20e-3,50e-3,100e-3,200e-3,500e-3,1.0]
-_v_div_1 = [1e-3,2e-3,5e-3,10e-3,20e-3,50e-3,100e-3,200e-3,500e-3,1.0,2.0]
-#_v_div = [20e-3, 50e-3, 100e-3, 200e-3, 500e-3, 1] # For scope at sussex
-#_v_div_1 = [20e-3, 50e-3, 100e-3, 200e-3, 500e-3, 1, 2]
+#_v_div = [1e-3,2e-3,5e-3,10e-3,20e-3,50e-3,100e-3,200e-3,500e-3,1.0]
+#_v_div_1 = [1e-3,2e-3,5e-3,10e-3,20e-3,50e-3,100e-3,200e-3,500e-3,1.0,2.0]
+_v_div = [20e-3, 50e-3, 100e-3, 200e-3, 500e-3, 1] # For scope at sussex
+_v_div_1 = [20e-3, 50e-3, 100e-3, 200e-3, 500e-3, 1, 2]
 
 sc = None
 sc = serial_command.SerialCommand(port_name)
@@ -106,29 +106,30 @@ def find_and_set_scope_y_scale(channel,height,width,delay,scope,scaleGuess=None)
     
     # If no scale guess, try to find reasonable trigger crossings at each y_scale
     ct = False
-    if scaleGuess==None:
-        for i, val in enumerate(_v_div):
-            scope.set_channel_y(channel,_v_div[-1*(i+1)], pos=3) # set scale, starting with largest
-            scope.set_edge_trigger( (-1*_v_div[-1*(i+1)]), channel, falling=True)
-            if i==0:
-                time.sleep(1) # Need to wait to clear previous triggered state
+    #if scaleGuess==None:
+    for i, val in enumerate(_v_div):
+        scope.set_channel_y(channel,_v_div[-1*(i+1)], pos=3) # set scale, starting with largest
+        scope.set_edge_trigger( (-1*_v_div[-1*(i+1)]), channel, falling=True)
+        if i==0:
+            time.sleep(1) # Need to wait to clear previous triggered state
             ct = scope.acquire_time_check(timeout=.5) # Wait for triggered acquisition
-            if ct == True:
-                break
-    else: #Else use the guess
-        if abs(scaleGuess) > 1:
-            guess_v_div = _v_div
-        else:
-            tmp_idx = np.where( np.array(_v_div) >= abs(scaleGuess) )[0][0]
-            guess_v_div = _v_div[0:tmp_idx]
-        for i, val in enumerate(guess_v_div):
-            scope.set_channel_y(channel,guess_v_div[-1*(i+1)],pos=3) # set scale, starting with largest
-            scope.set_edge_trigger( (-1*guess_v_div[-1*(i+1)]), channel, falling=True)
-            if i==0:
-                time.sleep(0.2) # Need to wait to clear previous triggered state
-            ct = scope.acquire_time_check() # Wait for triggered acquisition
-            if ct == True:
-                break
+        if ct == True:
+            break
+    #else: #Else use the guess
+    #    if abs(scaleGuess) > 1:
+    #        guess_v_div = _v_div
+    #    else:
+    #        tmp_idx = np.where( np.array(_v_div) >= abs(scaleGuess) )[0][0]
+    #        guess_v_div = _v_div[0:tmp_idx]
+    #        print guess_v_div
+    #    for i, val in enumerate(guess_v_div):
+    #        scope.set_channel_y(channel,guess_v_div[-1*(i+1)],pos=3) # set scale, starting with largest
+    #        scope.set_edge_trigger( (-1*guess_v_div[-1*(i+1)]), channel, falling=True)
+    #        if i==0:
+    #            time.sleep(0.2) # Need to wait to clear previous triggered state
+    #        ct = scope.acquire_time_check() # Wait for triggered acquisition
+    #        if ct == True:
+    #            break
 
     time.sleep(0.5) # Need to wait for scope to recognise new settings
     scope._get_preamble(channel)
@@ -154,14 +155,17 @@ def find_and_set_scope_y_scale(channel,height,width,delay,scope,scaleGuess=None)
         scale_idx = np.where( np.array(_v_div_1) >= -1*(min_volt/6) )[0][0]
         scale = _v_div_1[scale_idx]
     # Because of baseline noise!
-    if scale == 2e-3:
-        trig = -7.5e-3
+    #if scale == 2e-3:
+    #    trig = -7.5e-3
         #trig = -4e-3
-    elif scale == 1e-3:
-        trig = -7.5e-3
+    #elif scale == 1e-3:
+    #    trig = -7.5e-3
         #trig = -3e-3
-    elif scale == 5e-3:
-        trig = -7.5e-3
+    #elif scale == 5e-3:
+    #    trig = -7.5e-3
+    
+    if scale == 20e-3:
+        trig = -40e-3;
     else:
         trig = -1.*scale
     print "Preticted scale = %1.3fV, actual scale = %1.3fV, trigger @ %1.4fV" % (-1*(min_volt/6.6) , scale, trig)
@@ -225,7 +229,7 @@ def sweep(dir_out,box,channel,width,delay,scope,min_volt=None):
         print "Saving raw files to: %s..." % fname
         sc.fire_continuous()
         time.sleep(0.2)
-        save_ck = save_scopeTraces(fname, scope, 1, 100)
+        save_ck = save_scopeTraces(fname, scope, 1, 10)
         sc.stop()
         if save_ck == True:
             # Calc and return params

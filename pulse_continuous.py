@@ -11,7 +11,6 @@ from core import serial_command
 import optparse
 import sys
 
-
 def safe_exit(sc,e):
     print "Exit safely"
     print e
@@ -27,7 +26,7 @@ if __name__=="__main__":
     width = int(options.width)
     channel = (int(options.box)-1)*8 + int(options.channel)
     width = int(options.width)
-    sc = serial_command.SerialCommand("/dev/tty.usbserial-FTE3C0PG")
+    sc = serial_command.SerialCommand("/dev/tty.usbserial-FTGA2OCZ")
     sc.stop()
     sc.select_channel(channel)
     sc.set_pulse_height(16383)
