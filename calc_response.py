@@ -37,8 +37,11 @@ def return_files(base, box):
         for f in allFiles:
             if f == '.DS_Store':
                 continue
-            if int(f[5]) == i:
-                filesForChan.append(f)
+            try:
+                if int(f[5]) == i:
+                    filesForChan.append(f)
+            except ValueError:
+                print f
         if len(filesForChan) == 1:
             mostRecentFiles.append("%s%s" % (base_path, filesForChan[0]))
         elif len(filesForChan) > 1:
@@ -133,6 +136,7 @@ def channel_results_dict(chan, ipwFit, pinFit, pinPlot, time_str):
     test_results["pin_p0_err"] = pinFit.GetParError(0)
     test_results["pin_p1"] = pinFit.GetParameter(1)
     test_results["pin_p1_err"] = pinFit.GetParError(1)
+    test_results["pin_p1"] = pinFit.GetParameter(1)
     # Check PIN response linearity, again fit isn't ideal. Use redChi2 < 2.5
     pinChi2 = pinFit.GetChisquare() / pinFit.GetNDF()
     test_results["pinChi2"] = pinChi2
@@ -209,7 +213,6 @@ if __name__ == "__main__":
                     photonVsPIN_low.SetPoint(i,lowVals[i]["pin"],photonLow)
                     photonVsPIN_low.SetPointError(i,lowVals[i]["pin_err"]/np.sqrt(100),photonErrLow/np.sqrt(100))
                     #photonVsPIN_low.SetPointError(i,0,photonErrLow/np.sqrt(1))
-
                     photonVsIPW_low.SetPoint(i,lowVals[i]["ipw"],photonLow)
                     photonVsIPW_low.SetPointError(i,0,photonErrLow/np.sqrt(100))
             # Add titles, labels and styling
@@ -246,6 +249,7 @@ if __name__ == "__main__":
             ipwCan.Update(); pinCan.Update()
             # Results
             chan = int(lowFiles[j][-25]) + (box-1)*8
+            
             chanResDict = channel_results_dict(chan, ipwFit, pinFit, photonVsPIN_broad,time_str)
             resultsList.append(chanResDict)
             # Save
