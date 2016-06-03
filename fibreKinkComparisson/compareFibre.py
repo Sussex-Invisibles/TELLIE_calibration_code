@@ -5,28 +5,8 @@ import numpy as np
 import ROOT
 import matplotlib.pyplot as plt
 import glob
+import plot_ipw
 
-def get_gain(applied_volts):
-    """Get the gain from the applied voltage.
-       Constants taken from pmt gain calibration
-       taken July 2015 at site.
-       See smb://researchvols.uscs.susx.ac.uk/research/neutrino_lab/SnoPlus/PmtCal.
-    """
-    a, b, c = 2.432, 12.86, -237.5
-    #a, b, c = 545.1, 13.65, 0
-    gain = a*np.exp(b*applied_volts) + c
-    return gain
-
-def get_photons(volts_seconds,applied_volts):
-    """Use the integral (Vs) from the scope to get the number of photons.
-    Can accept -ve or +ve pulse
-    """
-    impedence = 50.0 
-    eV = (6.626e-34 * 3e8) / (500e-9)
-    qe = 0.192 # @ 501nm
-    gain = get_gain(applied_volts)
-    photons = np.fabs(volts_seconds) / (impedence * eV * gain * qe)
-    return photons
 
 def createDictionaryFromFile(inFile):
     outDict = {}
@@ -116,12 +96,12 @@ for directory in directoryArray:
 	dict2 = createDictionaryFromFile(lowFiles[1])
 	channel, date2 = getDateAndChannel(lowFiles[1])
 	#max_index = returnFirstZeroIndex(dict1["area"],dict2["area"])
-        PhotonValues.append([get_photons(x,0.7) for x in dict1["area"]])
-        PhotonValues.append([get_photons(x,0.7) for x in dict2["area"]])
+        PhotonValues.append([plot_ipw.get_photons(x,0.7) for x in dict1["area"]])
+        PhotonValues.append([plot_ipw.get_photons(x,0.7) for x in dict2["area"]])
 	max_index = returnFirstLessThanValueIndex(PhotonValues[0],PhotonValues[1],10000)
         del PhotonValues[:]
-        PhotonValues.append([get_photons(x,0.7) for x in dict1["area"][:max_index]])
-        PhotonValues.append([get_photons(x,0.7) for x in dict2["area"][:max_index]])
+        PhotonValues.append([plot_ipw.get_photons(x,0.7) for x in dict1["area"][:max_index]])
+        PhotonValues.append([plot_ipw.get_photons(x,0.7) for x in dict2["area"][:max_index]])
 	relative_photon_error_1 = np.divide(dict1["area_error"][:max_index],dict1["area"][:max_index])
 	relative_photon_error_2 = np.divide(dict2["area_error"][:max_index],dict2["area"][:max_index])
 	relative_ratio_error = np.sqrt(np.power(relative_photon_error_1,2)+np.power(relative_photon_error_2,2))
@@ -133,8 +113,8 @@ for directory in directoryArray:
         PINValues.append(dict2["PIN"][:max_index])
         PINErrors.append(dict1["PIN_error"][:max_index])
         PINErrors.append(dict2["PIN_error"][:max_index])
-        PhotonErrors.append([get_photons(x,0.7) for x in dict1["area_error"][:max_index]])
-        PhotonErrors.append([get_photons(x,0.7) for x in dict2["area_error"][:max_index]])
+        PhotonErrors.append([plot_ipw.get_photons(x,0.7) for x in dict1["area_error"][:max_index]])
+        PhotonErrors.append([plot_ipw.get_photons(x,0.7) for x in dict2["area_error"][:max_index]])
 
         ratioFit = fitPhotonPINCompare(PINValues,PINErrors,PhotonValues,PhotonErrors,channel,[date1,date2],iterNum)
         iterNum+= 1
