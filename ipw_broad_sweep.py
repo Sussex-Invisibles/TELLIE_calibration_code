@@ -42,29 +42,33 @@ if __name__=="__main__":
     usb_conn = scope_connections.VisaUSB()
     scope = scopes.Tektronix3000(usb_conn)
     ###########################################
-    scope_chan = 1 # We're using channel 1!
+    trig_chan = 1 # Which channel is the trigger in?
+    pmt_chan = 2 # Which channel is the pmt in?
     termination = 50 # Ohms
     trigger_level = 0.5 # half peak minimum
     falling_edge = True
     min_trigger = -0.004
     y_div_units = 1 # volts
-    x_div_units = 10e-9 # seconds
+    x_div_units = 100e-9 # seconds
     #y_offset = -2.5*y_div_units # offset in y (2.5 divisions up)
     y_offset = 0.5*y_div_units # offset in y (for UK scope)
-    x_offset = +2*x_div_units # offset in x (2 divisions to the left)
-    record_length = 1e3 # trace is 1e3 samples long
+    x_offset = +3*x_div_units # offset in x (2 divisions to the left)
+    record_length = 100e3 # trace is 1e3 samples long
     half_length = record_length / 2 # For selecting region about trigger point
     ###########################################
     scope.unlock()
     scope.set_horizontal_scale(x_div_units)
-    scope.set_horizontal_delay(x_offset) #shift to the left 2 units
-    scope.set_channel_y(scope_chan, y_div_units, pos=2.5)
-    #scope.set_display_y(scope_chan, y_div_units, offset=y_offset)
-    scope.set_channel_termination(scope_chan, termination)
+    scope.set_horizontal_delay(x_offset) #shift to the left 3 units
+    scope.set_active_channel(trig_chan)
+    scope.set_active_channel(pmt_chan)
+    scope.set_channel_y(trig_chan, y_div_units, pos=-3)
+    scope.set_channel_y(pmt_chan, y_div_units, pos=3)
+    scope.set_channel_termination(trig_chan, termination)
+    scope.set_channel_termination(pmt_chan, termination)
     scope.set_single_acquisition() # Single signal acquisition mode
     scope.set_record_length(record_length)
-    scope.set_data_mode(half_length-80, half_length+20)
-    scope.set_edge_trigger(-0.5*y_div_units, scope_chan, falling=True)
+    scope.set_data_mode(half_length-350, half_length+300)
+    scope.set_edge_trigger(0.5, trig_chan, falling=False)
     scope.lock()
     scope.begin() # Acquires the pre-amble! 
 
@@ -79,8 +83,8 @@ if __name__=="__main__":
     output_file.write("#PWIDTH\tPWIDTH Error\tPIN\tPIN Error\tWIDTH\tWIDTH Error\tRISE\tRISE Error\tFALL\tFALL Error\tAREA\tAREA Error\tMinimum\tMinimum Error\n")
 
     #Start scanning!
-    widths = range(0,9000,step)
-    #widths = range(0,12000,step)
+    #widths = range(0,10000,step)
+    widths = range(7600,10000,step)
     tmpResults = None
 
     t_start = time.time()
@@ -93,7 +97,7 @@ if __name__=="__main__":
             min_volt = float(tmpResults["peak"])
             if min_volt == 0: # If bad data set, make none
                 min_volt = 50e-3 # Used to be None - changed for speed up!
-        tmpResults = sweep.sweep(saveDir,box,channel,width,delay,scope,min_volt)
+        tmpResults = sweep.sweep(saveDir,box,channel,width,scope,min_volt=min_volt)
                 
         #results.set_meta_data("area", tmpResults["area"])
         #results.set_meta_data("area error", tmpResults["area error"])

@@ -19,15 +19,15 @@ import readPklWaveFile
 import calc_utils as calc
 import numpy as np
 
-port_name = "/dev/tty.usbserial-FTE3C0PG"
-#port_name = "/dev/tty.usbserial-FTGA2OCZ"
+#port_name = "/dev/tty.usbserial-FTE3C0PG"
+port_name = "/dev/tty.usbserial-FTGA2OCZ"
 ## TODO: better way of getting the scope type
 scope_name = "Tektronix3000"
 _boundary = [0,1.5e-3,3e-3,7e-3,15e-3,30e-3,70e-3,150e-3,300e-3,700e-3,1000]
-_v_div = [1e-3,2e-3,5e-3,10e-3,20e-3,50e-3,100e-3,200e-3,500e-3,1.0]
-_v_div_1 = [1e-3,2e-3,5e-3,10e-3,20e-3,50e-3,100e-3,200e-3,500e-3,1.0,2.0]
-#_v_div = [20e-3, 50e-3, 100e-3, 200e-3, 500e-3, 1] # For scope at sussex
-#_v_div_1 = [20e-3, 50e-3, 100e-3, 200e-3, 500e-3, 1, 2]
+#_v_div = [1e-3,2e-3,5e-3,10e-3,20e-3,50e-3,100e-3,200e-3,500e-3,1.0]
+#_v_div_1 = [1e-3,2e-3,5e-3,10e-3,20e-3,50e-3,100e-3,200e-3,500e-3,1.0,2.0]
+_v_div = np.asarray([20e-3, 50e-3, 100e-3, 200e-3, 500e-3, 1, 2, 10]) # For scope at sussex
+_v_div_1 = np.asarray([20e-3, 50e-3, 100e-3, 200e-3, 500e-3, 1, 2])
 
 sc = None
 sc = serial_command.SerialCommand(port_name)
@@ -54,25 +54,26 @@ def check_dir(dname):
     try:
         os.stat(direc)
     except:
-        os.mkdir(direc)
+        os.makedirs(direc)
         print "Made directory %s...." % dname
     return dname    
 
 def return_zero_result():
     r = {}
-    r['pin'] = 0
+    r['pin'], r['pin error'] = 0, 0
     r['width'], r['width error'] = 0, 0
     r['rise'], r['rise error'] = 0, 0
     r['fall'], r['fall error'] = 0, 0
     r['area'], r['area error'] = 0, 0
     r['peak'], r['peak error'] = 0, 0
+    r['time'], r['time error'] = 0, 0
     return r
 
-def save_scopeTraces(fileName, scope, channel, noPulses):
+def save_scopeTraces(fileName, scope, channels, noPulses):
     """Save a number of scope traces to file - uses compressed .pkl"""
-    scope._get_preamble(channel)
-    results = utils.PickleFile(fileName, 1)
-    results.add_meta_data("timeform_1", scope.get_timeform(channel))
+    scope._get_preamble(channels[-1])
+    results = utils.PickleFile(fileName, len(channels))
+    results.add_meta_data("timeform_1", scope.get_timeform(channels[0]))
 
     #ct = scope.acquire_time_check()
     #if ct == False:
@@ -84,7 +85,8 @@ def save_scopeTraces(fileName, scope, channel, noPulses):
     t_start, loopStart = time.time(),time.time()
     for i in range(noPulses):
         try:
-            results.add_data(scope.get_waveform(channel), 1)
+            for chan in channels:
+                results.add_data(scope.get_waveform(chan), chan)
         except Exception, e:
             print "Scope died, acquisition lost."
             print e
@@ -96,57 +98,44 @@ def save_scopeTraces(fileName, scope, channel, noPulses):
     results.close()
     return True
 
-def find_and_set_scope_y_scale(channel,height,width,delay,scope,scaleGuess=None):
-    """Finds best y_scaling for current pulses
+def find_and_set_scope_y_scale(trig_chan, pmt_chan, scope, scaleGuess=None):
+    """Finds best y_scaling for the current IPW settings
     """
     func_time = time.time()
-    sc.fire_continuous()
+    sc.enable_external_trig()
     time.sleep(0.1)
-    
-    # If no scale guess, try to find reasonable trigger crossings at each y_scale
-    ct = False
-    if scaleGuess==None:
-        for i, val in enumerate(_v_div):
-            scope.set_channel_y(channel,_v_div[-1*(i+1)], pos=3) # set scale, starting with largest
-            scope.set_edge_trigger( (-1*_v_div[-1*(i+1)]), channel, falling=True)
-            if i==0:
-                time.sleep(1) # Need to wait to clear previous triggered state
-            ct = scope.acquire_time_check(timeout=.5) # Wait for triggered acquisition
-            if ct == True:
-                break
-    else: #Else use the guess
-        if abs(scaleGuess) > 1:
-            guess_v_div = _v_div
-        else:
-            tmp_idx = np.where( np.array(_v_div) >= abs(scaleGuess) )[0][0]
-            guess_v_div = _v_div[0:tmp_idx]
-        for i, val in enumerate(guess_v_div):
-            scope.set_channel_y(channel,guess_v_div[-1*(i+1)],pos=3) # set scale, starting with largest
-            scope.set_edge_trigger( (-1*guess_v_div[-1*(i+1)]), channel, falling=True)
-            if i==0:
-                time.sleep(0.2) # Need to wait to clear previous triggered state
-            ct = scope.acquire_time_check() # Wait for triggered acquisition
-            if ct == True:
-                break
+
+
+    # Trigger off trigger signal
+    scope.set_edge_trigger(0.5, trig_chan, falling=False)
+    # Set scale. If we have a guess, use it. Else go for the largest.
+    #if scaleGuess:
+    #    print _v_div, np.abs(scaleGuess)
+    #    index = np.where(_v_div > np.abs(scaleGuess))[0][0]
+    #    print index, _v_div[index]
+    #    scope.set_channel_y(pmt_chan, _v_div[index], pos=3)
+    #else:
+    #scope.set_channel_y(pmt_chan, _v_div[-1], pos=3)     
 
     time.sleep(0.5) # Need to wait for scope to recognise new settings
-    scope._get_preamble(channel)
+    scope._get_preamble(pmt_chan)
+
     # Calc min value
     mini, wave = np.zeros( 10 ), None    
     for i in range( len(mini) ):
         # Check we get a trigger - even at the lowest setting we might see nothing
-        ct = scope.acquire_time_check(timeout=.4)
+        ct = scope.acquire_time_check(timeout=1.)
         if ct == False:
             print 'Triggers missed for this data point. Will skip and set data to 0.'
             return False
-        wave = scope.get_waveform(channel)
-        mini[i] = min(wave) - np.mean(wave[0:10])
+        wave = scope.get_waveform(pmt_chan)
+        mini[i] = min(wave) - np.mean(wave[0:1000])
     min_volt = np.mean(mini)
     print "MINIMUM MEASUREMENT:", min_volt
     if np.abs(min_volt) < 0.006:
         return False
 
-    # Set scope
+    # Calculate appropriate scope scale
     if -1*(min_volt/6) > _v_div_1[-1]:
         scale = _v_div_1[-1]
     else: 
@@ -158,15 +147,48 @@ def find_and_set_scope_y_scale(channel,height,width,delay,scope,scaleGuess=None)
         trig = -3e-3
     else:
         trig = -1.*scale
-    print "Preticted scale = %1.3fV, actual scale = %1.3fV, trigger @ %1.4fV" % (-1*(min_volt/6.6) , scale, trig)
-    scope.set_channel_y( channel, scale, pos=3) # set scale, starting with largest
-    scope.set_edge_trigger( trig, channel, falling=True)
-
-    print "TOTAL FUNC TIME = %1.2f s" % (time.time() - func_time)
-    sc.stop()
-    return True
+    print "Preticted scale = %1.3fV, actual scale = %1.3fV" % (-1*(min_volt/6.6), scale)
     
-def sweep(dir_out,box,channel,width,delay,scope,min_volt=None):
+    # Set scale and return
+    scope.set_channel_y(pmt_chan, scale, pos=3) # set scale, starting with largest
+    print "TOTAL FUNC TIME = %1.2f s" % (time.time() - func_time)
+    sc.disable_external_trigger()
+    return True
+
+def read_pin():
+    '''Wait keep looking for pin. It will be retuned when the sequence ends
+    '''
+    pin, rms = None, None
+    try:
+        while (pin == None):
+            pin, rms, channel = sc.read_pin_sequence()
+    except KeyboardInterrupt:
+        print "Keyboard interrupt"
+    return int(pin), float(rms)
+
+def printParamsDict(dict, name):
+    """Print calculated parameters and print to screen"""
+    area, areaStd =dict["area"], dict["area error"]
+    rise, riseStd =dict["rise"], dict["rise error"]
+    fall, fallStd =dict["fall"], dict["fall error"]
+    width, widthStd= dict["width"], dict["width error"]
+    peak, peakStd =dict["peak"], dict["peak error"]
+    time, timeStd =dict["time"], dict["time error"]
+    pin, pinStd =dict["pin"], dict["pin error"]
+
+    print "%s:" % name
+    print "--------"
+    print "Pin  \t\t= %1.2f +/- %1.2f " % (pin, pinStd)
+    print "-"
+    print "Peak \t\t= %1.2f +/- %1.2f V" % (peak, peakStd)
+    print "Area \t\t= %1.2e +/- %1.2e Vs" % (area, areaStd)
+    print "Fall time \t= %1.2f +/- %1.2f ns" % (fall*1e9, fallStd*1e9)
+    print "Rise time \t= %1.2f +/- %1.2f ns" % (rise*1e9, riseStd*1e9)
+    print "Width \t\t= %1.2f +/- %1.2f ns" % (width*1e9, widthStd*1e9)
+    print "-"
+    print "Pulse sep \t= %1.2f +/- %1.2f ns" % (time*1e9, timeStd*1e9)
+
+def sweep(dir_out,box,channel,width,scope,min_volt=None):
     """Perform a measurement using a default number of
     pulses, with user defined width, channel and rate settings.
     """
@@ -185,7 +207,7 @@ def sweep(dir_out,box,channel,width,delay,scope,min_volt=None):
     sc.set_pulse_width(width)
     sc.set_pulse_height(16383)
     sc.set_pulse_number(pulse_number)
-    sc.set_pulse_delay(delay)
+    #sc.set_pulse_delay(delay)
     sc.set_fibre_delay(fibre_delay)
     sc.set_trigger_delay(trigger_delay)
     
@@ -196,16 +218,10 @@ def sweep(dir_out,box,channel,width,delay,scope,min_volt=None):
     time.sleep(0.1)
 
     # Get pin read
+    sc.trigger_averaged()
     time.sleep(0.1)
-    sc.fire_sequence() # previously fire_sequence!
-    #wait for the sequence to end
-    tsleep = pulse_number * (delay*1e-3 + 210e-6)
-    time.sleep(tsleep) #add the offset in
-    pin = None
-   # while not comms_flags.valid_pin(pin,channel):
-    while pin==None:
-        pin,rms, _ = sc.tmp_read_rms()
-    print "PIN (sweep):",pin[logical_channel], rms[logical_channel]
+    pin, rms = read_pin()
+    #print "PIN (sweep):", pin, rms
     sc.stop()
 
     # File system stuff
@@ -214,28 +230,45 @@ def sweep(dir_out,box,channel,width,delay,scope,min_volt=None):
     fname = "%sWidth%05d" % (directory,width)
     
     # Check scope
-    ck = find_and_set_scope_y_scale(1,height,width,delay,scope,scaleGuess=min_volt)
+    ck = find_and_set_scope_y_scale(1, 2, scope, scaleGuess=min_volt)
     if ck == True:
         print "Saving raw files to: %s..." % fname
-        sc.fire_continuous()
+        sc.enable_external_trig()
         time.sleep(0.2)
-        save_ck = save_scopeTraces(fname, scope, 1, 100)
+        save_ck = save_scopeTraces(fname, scope, [1,2], 100)
         sc.stop()
         if save_ck == True:
             # Calc and return params
-            x,y = calc.readPickleChannel(fname, 1)
-            results = calc.dictionary_of_params(x,y)
-            results["pin"] = pin[logical_channel]
-            results["pin error"] = rms[logical_channel]
-            calc.printParamsDict(results, width)
-            calc.plot_eg_pulses(x,y,10, fname='%s/LastMeasuredPulses.png' % dir_out.split("/")[0])
+            x1,y1 = calc.readPickleChannel(fname, 1)
+            x2,y2 = calc.readPickleChannel(fname, 2)
+            calc.plot_eg_pulses(x2,y2,10, fname='%s/LastMeasuredPulses.png' % dir_out.split("/")[0])
             #os.system("open %s/LastMeasuredPulses.png" % dir_out.split("/")[0])
+            # Make sure we see a signal well above noise
+            snr = calc.calcSNR(x2,y2)
+            print "SNR: ", snr
+            if snr > 5:
+                # Calculate results
+                results = calc.dictionary_of_params(x2,y2)
+                mean, std, sterr = calc.calcJitter(x2, y2, x1, y1, threshold=0.4)
+                results["time"] = mean
+                results["time error"] = std
+                results["pin"] = pin
+                results["pin error"] = rms
+                printParamsDict(results, width)
+            else:
+                # No signal observerd, return zero
+                results = return_zero_result()
+                results['pin'] = pin
+                results['pin error'] = rms
         elif save_ck == False:
+            # Data acquisition was not sucessful, return zero
             results = return_zero_result()
-            results['pin'] = pin[logical_channel]
+            results['pin'] = pin
+            results['pin error'] = rms
     else: 
+        # Couldn't find y scaling, return zero
         results = return_zero_result()
-        results['pin'] = pin[logical_channel]
-        results["pin error"] = rms[logical_channel]
+        results['pin'] = pin
+        results["pin error"] = rms
     sc.stop()
     return results
