@@ -102,13 +102,14 @@ if __name__=="__main__":
         #results.set_meta_data("area", tmpResults["area"])
         #results.set_meta_data("area error", tmpResults["area error"])
 
-        output_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n"%(width, 0,
+        output_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%st%s\t%s\n"%(width, 0,
                                             tmpResults["pin"], tmpResults["pin error"],
                                             tmpResults["width"], tmpResults["width error"],
                                             tmpResults["rise"], tmpResults["rise error"],
                                             tmpResults["fall"], tmpResults["fall error"],
                                             tmpResults["area"], tmpResults["area error"],
-                                            tmpResults["peak"], tmpResults["peak error"] ))
+                                            tmpResults["peak"], tmpResults["peak error"],
+                                            tmpResults["time"], tmpResults["time error"] ))
 
         print "WIDTH %d took : %1.1f s" % (width, time.time()-loopStart)
 
