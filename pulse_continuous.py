@@ -11,6 +11,7 @@ from core import serial_command
 import optparse
 import sys
 
+
 def safe_exit(sc,e):
     print "Exit safely"
     print e

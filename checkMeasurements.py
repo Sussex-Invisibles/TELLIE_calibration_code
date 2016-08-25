@@ -21,8 +21,12 @@ if __name__ == "__main__":
     res_list = plot_ipw.read_scope_scan(options.file)
 
     p = options.file.split('/')
-    chan = p[2][4:6]
-    dataPath = os.path.join(p[0],p[1],"raw_data/channel_%s/" % chan)
+    print p 
+    box  = int(p[2][4:6])
+    chan  = int(p[3][4:6])
+    print chan
+    overallChan = ((box-1)*8)+chan 
+    dataPath = os.path.join(p[0],p[1],"Box_%02d/raw_data/channel_%02d/" % (box,overallChan))
     files = [ f for f in os.listdir(dataPath) if os.path.isfile(os.path.join(dataPath,f)) ]
 
     output_filename = "%s_check.dat" % options.file[0:-4]

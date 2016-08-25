@@ -30,24 +30,33 @@ def return_files(base, box):
     '''Return an array containing the most up-to-date data files for a given box and sweep type
     '''
     base_path = "%s/Box_%02d/" % (base, box)
-    allFiles = [ f for f in os.listdir(base_path) if os.path.isfile(os.path.join(base_path,f)) ]
+    allFiles = [ f for f in os.listdir(base_path) if os.path.isfile(os.path.join(base_path,f)) and not f.startswith(".") and f.endswith(".dat")]
+    print allFiles
     mostRecentFiles = []
     for i in range(1,9,1):
         filesForChan = []
         for f in allFiles:
             if f == '.DS_Store':
                 continue
-            try:
-                if int(f[5]) == i:
-                    filesForChan.append(f)
-            except ValueError:
-                print f
+            if int(f[5]) == i:
+                filesForChan.append(f)
         if len(filesForChan) == 1:
             mostRecentFiles.append("%s%s" % (base_path, filesForChan[0]))
         elif len(filesForChan) > 1:
             mostRecentFiles.append("%s%s" %(base_path, find_most_recent_file(filesForChan)))
     return mostRecentFiles
   
+def return_all_files(base, box):
+    base_path = "%s/Box_%02d/" % (base, box)
+    allFiles = [ f for f in os.listdir(base_path) if os.path.isfile(os.path.join(base_path,f)) ]
+    files = []
+    for f in allFiles:
+        if f == '.DS_Store':
+            continue
+        else:
+            files.append("%s%s" % (base_path, f))
+    return files 
+
 def return_boxes(path):
     '''Find which boxes we have data for.
     '''
@@ -88,11 +97,11 @@ def fit_pin(plot, can):
     fit.SetParameter(1, grad)
     fit.SetLineColor(2)
     plot.Fit(fit, "FMQ") # Use minut with 'improved fit'
+    can.cd()
+    fit.Draw("same")
     can.Update()
-    st = plot.GetListOfFunctions().FindObject("stats")
-    st.SetX1NDC(0.32)
-    st.SetX2NDC(0.67)    
     return fit, plot, can
+    
 
 def get_xy(plot):
     '''Return  x, y arrays from TGraph
@@ -104,7 +113,7 @@ def get_xy(plot):
     y_buff.SetSize(N)
     return np.array(x_buff,copy=True), np.array(y_buff,copy=True)
 
-def channel_results_dict(chan, ipwFit, pinFit, pinPlot, time_str):
+def channel_results_dict(chan, ipwFit, pinFit, pinPlot,time_str):
     '''A few checks so we can flag unusual channels
     '''
     ipwPars, pinPars = ipwFit.GetParameters(), pinFit.GetParameters()
@@ -136,13 +145,12 @@ def channel_results_dict(chan, ipwFit, pinFit, pinPlot, time_str):
     test_results["pin_p0_err"] = pinFit.GetParError(0)
     test_results["pin_p1"] = pinFit.GetParameter(1)
     test_results["pin_p1_err"] = pinFit.GetParError(1)
-    test_results["pin_p1"] = pinFit.GetParameter(1)
     # Check PIN response linearity, again fit isn't ideal. Use redChi2 < 2.5
     pinChi2 = pinFit.GetChisquare() / pinFit.GetNDF()
     test_results["pinChi2"] = pinChi2
     # PIN saturation 
     xarr, yarr = get_xy(pinPlot)
-    test_results["pinSaturation"] = yarr[np.where(xarr == max(xarr))[0][0]]
+    #test_results["pinSaturation"] = yarr[np.where(xarr == max(xarr))[0][0]]
     # Get pin rms on smallest photon measure
     N=pinPlot.GetN()
     rms = pinPlot.GetErrorX(N-1)*np.sqrt(100) # Needs to be scaled back
@@ -163,7 +171,7 @@ def channel_results_dict(chan, ipwFit, pinFit, pinPlot, time_str):
 
 if __name__ == "__main__":
     parser = optparse.OptionParser()
-    parser.add_option("-d", dest="direc", default="./")
+    parser.add_option("-d", dest="direc", default="./box_comparison")
     (options,args) = parser.parse_args()
     
     ROOT.gStyle.SetOptFit(1111) # Formatting for fit parameters
@@ -175,92 +183,71 @@ if __name__ == "__main__":
     fout = ROOT.TFile("%s/fits/rootFiles.root"%rootDirec,"recreate")
     ipwCan = ROOT.TCanvas()
     pinCan = ROOT.TCanvas()
-    ipwCan.SetCanvasSize(1000,400)
-    pinCan.SetCanvasSize(1000,400)
-    ipwCan.Divide(2,1)
-    pinCan.Divide(2,1)
+    ipwCan.SetCanvasSize(500,400)
+    pinCan.SetCanvasSize(500,400)
+    #ipwCan.Divide(2,1)
+    #pinCan.Divide(2,1)
     
     # Loop over all data using standarised directory structure
     resultsList = []
-    boxes = return_boxes("%s/broad_sweep/"%rootDirec)
+    boxes = return_boxes("%s/low_intensity/"%rootDirec)
     for box in boxes:
-        broadFiles = return_files("%s/broad_sweep"%rootDirec, box)
+        #lowFiles = return_all_files("%s/low_intensity"%rootDirec, box)
         lowFiles = return_files("%s/low_intensity"%rootDirec, box)
         for j in range(len(lowFiles)):
-            broadVals = check_data(plot_ipw.read_scope_scan(broadFiles[j]))
             lowVals = check_data(plot_ipw.read_scope_scan(lowFiles[j]))
             # Creat plots
-            photonVsPIN_broad = ROOT.TGraphErrors()
-            photonVsIPW_broad = ROOT.TGraphErrors()
             photonVsPIN_low = ROOT.TGraphErrors()
             photonVsIPW_low = ROOT.TGraphErrors()
-            print len(broadVals), len(lowVals), broadFiles[j], lowFiles[j]
-            for i in range(len(broadVals)):
-                photonBroad = plot_ipw.get_photons(broadVals[i]["area"], 0.5)
-                photonErrBroad = plot_ipw.get_photons(broadVals[i]["area_err"], 0.5)
+            print len(lowVals), lowFiles[j]
+            for i in range(len(lowVals)):
                 # Fill plots with data
                 # Note: Data points are returned as mean and stdev(rms)
                 #       for fitting, uncertainties should be given as standard error. 
-                photonVsPIN_broad.SetPoint(i,broadVals[i]["pin"],photonBroad)
-                photonVsPIN_broad.SetPointError(i,broadVals[i]["pin_err"]/np.sqrt(100),photonErrBroad/np.sqrt(100))
+                photonLow = plot_ipw.get_photons(lowVals[i]["area"], 0.7)
+                photonErrLow = plot_ipw.get_photons(lowVals[i]["area_err"], 0.7)
+
+                photonVsPIN_low.SetPoint(i,lowVals[i]["pin"],photonLow)
+                photonVsPIN_low.SetPointError(i,lowVals[i]["pin_err"]/np.sqrt(100),photonErrLow/np.sqrt(100))
                 #photonVsPIN_broad.SetPointError(i,0,photonErrBroad/np.sqrt(1))
 
-                photonVsIPW_broad.SetPoint(i,broadVals[i]["ipw"],photonBroad)
-                photonVsIPW_broad.SetPointError(i,0,photonErrBroad/np.sqrt(100))
-                if i < len(lowVals):
-                    photonLow = plot_ipw.get_photons(lowVals[i]["area"], 0.7)
-                    photonErrLow = plot_ipw.get_photons(lowVals[i]["area_err"], 0.7)
-                    photonVsPIN_low.SetPoint(i,lowVals[i]["pin"],photonLow)
-                    photonVsPIN_low.SetPointError(i,lowVals[i]["pin_err"]/np.sqrt(100),photonErrLow/np.sqrt(100))
-                    #photonVsPIN_low.SetPointError(i,0,photonErrLow/np.sqrt(1))
-                    photonVsIPW_low.SetPoint(i,lowVals[i]["ipw"],photonLow)
-                    photonVsIPW_low.SetPointError(i,0,photonErrLow/np.sqrt(100))
+                photonVsIPW_low.SetPoint(i,lowVals[i]["ipw"],photonLow)
+                photonVsIPW_low.SetPointError(i,0,photonErrLow/np.sqrt(100))
+
             # Add titles, labels and styling
             logical_channel = (int(lowFiles[j][-33:-31])-1)*8 + int(lowFiles[j][-26:-24])
             time_str = lowFiles[j][-16:-4]
-            photonVsPIN_broad.SetName("Chan%02d_PIN_broad"%logical_channel)
-            photonVsPIN_broad.GetXaxis().SetTitle("PIN reading (16 bit)")
-            photonVsPIN_broad.GetYaxis().SetTitle("No. photons")
-            photonVsIPW_broad.SetName("Chan%02d_IPW_broad"%logical_channel) 
-            photonVsIPW_broad.GetXaxis().SetTitle("IPW (14 bit)")
-            photonVsIPW_broad.GetYaxis().SetTitle("No. photons")
-            photonVsPIN_low.SetName("Chan%02d_PIN_low"%logical_channel)
+            photonVsPIN_low.SetName("Chan%02d_PIN_%s"%(logical_channel, time_str))
             photonVsPIN_low.GetXaxis().SetTitle("PIN reading (16 bit)")
             photonVsPIN_low.GetYaxis().SetTitle("No. photons")
-            photonVsIPW_low.SetName("Chan%02d_IPW_low"%logical_channel)
+            photonVsIPW_low.SetName("Chan%02d_IPW_%s"%(logical_channel, time_str))
             photonVsIPW_low.GetXaxis().SetTitle("IPW (14 bit)")
             photonVsIPW_low.GetYaxis().SetTitle("No. photons")
-            plot_ipw.set_style(photonVsPIN_broad,1)
-            plot_ipw.set_style(photonVsIPW_broad,1)
             plot_ipw.set_style(photonVsPIN_low,1)
             plot_ipw.set_style(photonVsIPW_low,1)
             # Draw
-            pinCan.cd(1) 
-            photonVsPIN_broad.Draw("ap")
-            pinCan.cd(2)
+            pinCan.cd()
             photonVsPIN_low.Draw("ap")
-            ipwCan.cd(1)
-            photonVsIPW_broad.Draw("ap")
-            ipwCan.cd(2)
+            ipwCan.cd()
             photonVsIPW_low.Draw("ap")
             # Fits
-            ipwFit, photonVsIPW_low, ipwCan = fit_ipw(photonVsIPW_low,ipwCan)
             pinFit, photonVsPIN_low, pinCan = fit_pin(photonVsPIN_low,pinCan)
-            ipwCan.Update(); pinCan.Update()
+            time.sleep(1)
+            ipwFit, photonVsIPW_low, ipwCan = fit_ipw(photonVsIPW_low,ipwCan)
+            time.sleep(1)
+            ipwCan.Update() 
+            pinCan.Update()
             # Results
             chan = int(lowFiles[j][-25]) + (box-1)*8
-            
-            chanResDict = channel_results_dict(chan, ipwFit, pinFit, photonVsPIN_broad,time_str)
+            chanResDict = channel_results_dict(chan, ipwFit, pinFit, photonVsPIN_low,time_str)
             resultsList.append(chanResDict)
             # Save
             pdf_dir = "%s/fits/pdfs"%rootDirec
             if not os.path.exists(pdf_dir):
                 os.makedirs(pdf_dir)
-            pinCan.Print("%s/Chan%02d_PIN.pdf"%(pdf_dir,logical_channel))
-            ipwCan.Print("%s/Chan%02d_IPW.pdf"%(pdf_dir,logical_channel))
-            photonVsPIN_broad.Write()
+            pinCan.Print("%s/Chan%02d_PIN_%s.pdf"%(pdf_dir,logical_channel, time_str))
+            ipwCan.Print("%s/Chan%02d_IPW_%s.pdf"%(pdf_dir,logical_channel, time_str))
             photonVsPIN_low.Write()
-            photonVsIPW_broad.Write()
             photonVsIPW_low.Write()
             #print 'Only the first plot for now...'
             #break

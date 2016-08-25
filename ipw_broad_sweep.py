@@ -70,7 +70,8 @@ if __name__=="__main__":
 
     #Create a new, timestamped, summary file
     timestamp = time.strftime("%y%m%d_%H.%M",time.gmtime())
-    saveDir = sweep.check_dir("broad_sweep/Box_%02d/" % (box))
+    saveDir = sweep.check_dir("./April_19/broad_sweep/")
+    saveDir = sweep.check_dir("./April_19/broad_sweep/Box_%02d/" % (box))
     sweep.check_dir("%sraw_data/" % saveDir)
     output_filename = "%s/Chan%02d_IPWbroad_%s.dat" % (saveDir,channel,timestamp)
     #results = utils.PickleFile(output_filename, 1)
@@ -79,8 +80,8 @@ if __name__=="__main__":
     output_file.write("#PWIDTH\tPWIDTH Error\tPIN\tPIN Error\tWIDTH\tWIDTH Error\tRISE\tRISE Error\tFALL\tFALL Error\tAREA\tAREA Error\tMinimum\tMinimum Error\n")
 
     #Start scanning!
-    widths = range(0,9000,step)
-    #widths = range(0,12000,step)
+    #widths = range(0,9000,step)
+    widths = range(0,10000,step)
     tmpResults = None
 
     t_start = time.time()
@@ -91,8 +92,8 @@ if __name__=="__main__":
             #set a best guess for the trigger and the scale
             #using the last sweeps value
             min_volt = float(tmpResults["peak"])
-            if min_volt == 0: # If bad data set, make none
-                min_volt = 50e-3 # Used to be None - changed for speed up!
+            if min_volt == 0: # If bad data set, make none                
+		min_volt = 50e-3 # Used to be None - changed for speed up!
         tmpResults = sweep.sweep(saveDir,box,channel,width,delay,scope,min_volt)
                 
         #results.set_meta_data("area", tmpResults["area"])
@@ -113,4 +114,3 @@ if __name__=="__main__":
     #results.close()
 
     print "Total script time : %1.1f mins"%( (time.time() - total_time) / 60)
-    
