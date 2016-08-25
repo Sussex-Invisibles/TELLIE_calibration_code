@@ -34,7 +34,7 @@ def read_scope_scan(fname):
         if line[0]=="#":
             continue
         bits = line.split()
-        if len(bits)!=14:
+        if len(bits)!=16:
             continue
         # Append needs to all be done in one. If we make a dict 'results = {}' which we 
         # re-write and append it fills with all the same object and so we have multiple copies
