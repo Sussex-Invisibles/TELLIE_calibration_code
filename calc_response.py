@@ -1,8 +1,9 @@
 #################################################
 # calc_response.py
 #
-# This script calculates the photon an PIN response
-# constants for each of the 96 channels.
+# This script calculates the photon, PIN  response
+# and fibre delay and  constants for each of the 
+# 96 channels.
 #################################################
 import plot_ipw
 import ROOT
@@ -141,6 +142,7 @@ if __name__ == "__main__":
     fout = ROOT.TFile("fits/rootFiles.root","recreate")
     ipwCan = ROOT.TCanvas()
     pinCan = ROOT.TCanvas()
+    timeCan = ROOT.TCanvas()
     ipwCan.SetCanvasSize(1000,400)
     pinCan.SetCanvasSize(1000,400)
     ipwCan.Divide(2,1)
@@ -155,11 +157,12 @@ if __name__ == "__main__":
         for j in range(len(lowFiles)):
             broadVals = check_data(plot_ipw.read_scope_scan(broadFiles[j]))
             lowVals = check_data(plot_ipw.read_scope_scan(lowFiles[j]))
-            # Creat plots
+            # Create plots
             photonVsPIN_broad = ROOT.TGraphErrors()
             photonVsIPW_broad = ROOT.TGraphErrors()
             photonVsPIN_low = ROOT.TGraphErrors()
             photonVsIPW_low = ROOT.TGraphErrors()
+            timeVsIPW = ROOT.TGraphErrors()
             for i in range(len(broadVals)):
                 photonBroad = plot_ipw.get_photons(broadVals[i]["area"], 0.5)
                 photonErrBroad = plot_ipw.get_photons(broadVals[i]["area_err"], 0.5)
@@ -170,6 +173,8 @@ if __name__ == "__main__":
                 photonVsPIN_broad.SetPointError(i,broadVals[i]["pin_err"]/np.sqrt(100),photonErrBroad/np.sqrt(100))
                 photonVsIPW_broad.SetPoint(i,broadVals[i]["ipw"],photonBroad)
                 photonVsIPW_broad.SetPointError(i,0,photonErrBroad/np.sqrt(100))
+                timeVsIPW.SetPoint(i,broadVals[i]["ipw"],broadVals[i]["time"])
+                timeVsIPW.SetPointError(i,0,broadVals[i]["time_err"]/np.sqrt(100))
                 if i < len(lowVals):
                     photonLow = plot_ipw.get_photons(lowVals[i]["area"], 0.7)
                     photonErrLow = plot_ipw.get_photons(lowVals[i]["area_err"], 0.7)
@@ -191,10 +196,14 @@ if __name__ == "__main__":
             photonVsIPW_low.SetName("Chan%02d_IPW_low"%logical_channel)
             photonVsIPW_low.GetXaxis().SetTitle("IPW (14 bit)")
             photonVsIPW_low.GetYaxis().SetTitle("No. photons")
+            timeVsIPW.SetName("Chan%02d_IPW_low"%logical_channel)
+            timeVsIPW.GetXaxis().SetTitle("IPW (14 bit)")
+            timeVsIPW.GetYaxis().SetTitle("PMT time - trigger in (ns)")
             plot_ipw.set_style(photonVsPIN_broad,1)
             plot_ipw.set_style(photonVsIPW_broad,1)
             plot_ipw.set_style(photonVsPIN_low,1)
             plot_ipw.set_style(photonVsIPW_low,1)
+            plot_ipw.set_style(timeVsIPW,1)
             # Draw
             pinCan.cd(1) 
             photonVsPIN_broad.Draw("ap")
@@ -204,6 +213,12 @@ if __name__ == "__main__":
             photonVsIPW_broad.Draw("ap")
             ipwCan.cd(2)
             photonVsIPW_low.Draw("ap")
+            timeCan.cd()
+            timeVsIPW.Draw("ap")
+            ############################
+            # Need to figure out what to
+            # do with timing. Do we need
+            # a fit?
             # Fits
             ipwFit, photonVsIPW_low, ipwCan = fit_ipw(photonVsIPW_low,ipwCan)
             pinFit, photonVsPIN_low, pinCan = fit_pin(photonVsPIN_low,pinCan)
@@ -218,10 +233,12 @@ if __name__ == "__main__":
                 os.makedirs(pdf_dir)
             pinCan.Print("%s/Chan%02d_PIN.pdf"%(pdf_dir,logical_channel))
             ipwCan.Print("%s/Chan%02d_IPW.pdf"%(pdf_dir,logical_channel))
+            timeCan.Print("%s/Chan%02d_Time.pdf"%(pdf_dir,logical_channel))
             photonVsPIN_broad.Write()
             photonVsPIN_low.Write()
             photonVsIPW_broad.Write()
             photonVsIPW_low.Write()
+            timeVsIPW.Write()
             #print 'Only the first plot for now...'
             #break
         #break

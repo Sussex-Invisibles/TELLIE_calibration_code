@@ -40,7 +40,7 @@ def read_scope_scan(fname):
         # re-write and append it fills with all the same object and so we have multiple copies
         # of the same result.
         resultsList.append({"ipw":int(bits[0]),"ipw_err": int(bits[1]),"pin":int(bits[2]),"pin_err":float(bits[3]),"width":float(bits[4]),"width_err":float(bits[5]),"rise":float(bits[6]),"rise_err":float(bits[7]),"fall":float(bits[8]),"fall_err":float(bits[9]),"area":float(bits[10]),"area_err":float(bits[11]),"mini":float(bits[12]),"mini_err":float(bits[13]),"time":float(bits[14]),"time_err":float(bits[15])})
-    return resultsList
+        return resultsList
 
 def clean_data(res_list):
     """Clean data of Inf and Nan's so as not to confuse plots"""
@@ -66,7 +66,7 @@ def clean_data(res_list):
         if res_list[i]["width"] < 3.5e-9 or res_list[i]["width_err"] > 1.5e-9:
             res_list[i]["width"] = 0
             res_list[i]["width_err"] = 0
-        if res_list[i]["time"] < res_list[i]["time_err"]:
+        if res_list[i]["time_err"] > res_list[i]["time"]:
             res_list[i]["time"] = 0
             res_list[i]["time_err"] = 0
     return res_list
@@ -77,7 +77,7 @@ def get_gain(applied_volts):
        taken July 2015 at site.
        See smb://researchvols.uscs.susx.ac.uk/research/neutrino_lab/SnoPlus/PmtCal.
     """
-    a, b, c = 12.553, 12.876, -1276.2
+    a, b, c = 12.5531, 12.8764, -1276.2
     gain = a*np.exp(b*applied_volts) + c
     return gain
 
@@ -119,10 +119,10 @@ def get_photons(volts_seconds,applied_volts):
     Can accept -ve or +ve pulse
     """
     impedence = 50.0 
-    eV = 1.602e-19
+    Q = 1.6e-19
     qe = 0.192 # @ 501nm
     gain = get_gain(applied_volts)
-    photons = np.fabs(volts_seconds) / (impedence * eV * gain * qe)
+    photons = np.fabs(volts_seconds) / (impedence * Q * gain * qe)
     return photons
 
 def set_style(gr,style=1,title_size=0.04):
@@ -229,6 +229,7 @@ if __name__=="__main__":
     fall_vs_photon = ROOT.TGraphErrors()
     fall_vs_ipw = ROOT.TGraphErrors()
     pin_vs_ipw = ROOT.TGraphErrors()
+    time_vs_ipw = ROOT.TGraphErrors()
 
     w, ipw = np.zeros(len(res_list)), np.zeros(len(res_list))
     for i in range(len(res_list)):
@@ -244,7 +245,9 @@ if __name__=="__main__":
         fall_time_err = res_list[i]["fall_err"]*1e9
         width_time = res_list[i]["width"]*1e9
         width_time_err = res_list[i]["width_err"]*1e9
-        
+        pulse_sep = res_list[i]["time"]*1e9
+        pulse_sep_err = res_list[i]["time_err"]*1e9
+
         pin_vs_ipw.SetPoint(i,res_list[i]["ipw"],res_list[i]["pin"])
         pin_vs_ipw.SetPointError(i,0,res_list[i]["pin_err"])
 
@@ -264,10 +267,13 @@ if __name__=="__main__":
         width_vs_photon.SetPointError(i,photon_err,width_time_err)
         width_vs_ipw.SetPoint(i,res_list[i]["ipw"],width_time)
         width_vs_ipw.SetPointError(i,res_list[i]["ipw_err"],width_time_err)
+        time_vs_ipw.SetPoint(i,res_list[i]["ipw"],pulse_sep)
+        time_vs_ipw.SetPointError(i,res_list[i]["ipw_err"],pulse_sep_err)
         
         #For Cutoff calc
         w[i], ipw[i] = width_time, res_list[i]["ipw"]
         #print w[i], rise_time, fall_time
+
     set_style(pin_vs_ipw,1)
     set_style(photon_vs_pin,1)
     set_style(photon_vs_ipw,1)
@@ -277,6 +283,7 @@ if __name__=="__main__":
     set_style(fall_vs_ipw,1)
     set_style(width_vs_photon,1)
     set_style(width_vs_ipw,1)
+    set_style(time_vs_ipw,1)
 
     # Add titles and labels
     pin_vs_ipw.SetName("pin_vs_ipw")
@@ -306,6 +313,9 @@ if __name__=="__main__":
     fall_vs_ipw.SetName("fall_vs_ipw")
     fall_vs_ipw.GetXaxis().SetTitle("IPW (14 bit)")
     fall_vs_ipw.GetYaxis().SetTitle("Fall time (ns)")
+    time_vs_ipw.SetName("time_vs_ipw")
+    time_vs_ipw.GetXaxis().SetTitle("IPW (14 bit)")
+    time_vs_ipw.GetYaxis().SetTitle("Light generation delay (ns)")
 
     output_dir = os.path.join(dirname)
     if not os.path.exists(output_dir):
@@ -340,6 +350,9 @@ if __name__=="__main__":
     width_vs_ipw.Draw("ap")
     can.Print("%s/width_vs_ipw.pdf"%output_dir)
 
+    time_vs_ipw.Draw("ap")
+    can.Print("%s/time_vs_ipw.pdf"%output_dir)
+
     fout = ROOT.TFile("%s/plots.root"%output_dir,"recreate")
     
     photon_vs_pin.Write()
@@ -350,6 +363,7 @@ if __name__=="__main__":
     rise_vs_ipw.Write()
     fall_vs_photon.Write()
     fall_vs_ipw.Write()
+    time_vs_ipw.Write()
 
     out_dir = os.path.join(sweep_type,"plots/")
     master_name = "%sChan%02d_%s.pdf" % (out_dir, logical_channel, sweep_type)

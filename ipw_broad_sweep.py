@@ -106,14 +106,10 @@ if __name__=="__main__":
                                             tmpResults["fall"], tmpResults["fall error"],
                                             tmpResults["area"], tmpResults["area error"],
                                             tmpResults["peak"], tmpResults["peak error"],
-                                            tmpResults["time"], tmpResults["time error"]))
+                                            tmpResults["time"], tmpResults["time error"] ))
 
         print "WIDTH %d took : %1.1f s" % (width, time.time()-loopStart)
         
-        # If recorded pulses are consistent with zero, break.
-        #if np.abs(tmpResults["peak"]) < 0.05:
-        #    break
-
     # Close file and exit
     output_file.close()
     print "Total script time : %1.1f mins"%( (time.time() - total_time) / 60)
