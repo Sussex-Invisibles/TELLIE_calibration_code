@@ -34,12 +34,12 @@ def read_scope_scan(fname):
         if line[0]=="#":
             continue
         bits = line.split()
-        if len(bits)!=14:
+        if len(bits)!=16:
             continue
         # Append needs to all be done in one. If we make a dict 'results = {}' which we 
         # re-write and append it fills with all the same object and so we have multiple copies
         # of the same result.
-        resultsList.append({"ipw":int(bits[0]),"ipw_err": int(bits[1]),"pin":int(bits[2]),"pin_err":float(bits[3]),"width":float(bits[4]),"width_err":float(bits[5]),"rise":float(bits[6]),"rise_err":float(bits[7]),"fall":float(bits[8]),"fall_err":float(bits[9]),"area":float(bits[10]),"area_err":float(bits[11]),"mini":float(bits[12]),"mini_err":float(bits[13])})
+        resultsList.append({"ipw":int(bits[0]),"ipw_err": int(bits[1]),"pin":int(bits[2]),"pin_err":float(bits[3]),"width":float(bits[4]),"width_err":float(bits[5]),"rise":float(bits[6]),"rise_err":float(bits[7]),"fall":float(bits[8]),"fall_err":float(bits[9]),"area":float(bits[10]),"area_err":float(bits[11]),"mini":float(bits[12]),"mini_err":float(bits[13]),"time":float(bits[14]),"time_err":float(bits[15])})
     return resultsList
 
 def clean_data(res_list):
@@ -66,6 +66,9 @@ def clean_data(res_list):
         if res_list[i]["width"] < 3.5e-9 or res_list[i]["width_err"] > 1.5e-9:
             res_list[i]["width"] = 0
             res_list[i]["width_err"] = 0
+        if res_list[i]["time"] < res_list[i]["time_err"]:
+            res_list[i]["time"] = 0
+            res_list[i]["time_err"] = 0
     return res_list
 
 def get_gain(applied_volts):
@@ -74,8 +77,7 @@ def get_gain(applied_volts):
        taken July 2015 at site.
        See smb://researchvols.uscs.susx.ac.uk/research/neutrino_lab/SnoPlus/PmtCal.
     """
-    a, b, c = 2.432, 12.86, -237.5
-    #a, b, c = 545.1, 13.65, 0
+    a, b, c = 12.553, 12.876, -1276.2
     gain = a*np.exp(b*applied_volts) + c
     return gain
 
@@ -117,7 +119,7 @@ def get_photons(volts_seconds,applied_volts):
     Can accept -ve or +ve pulse
     """
     impedence = 50.0 
-    eV = (6.626e-34 * 3e8) / (500e-9)
+    eV = 1.602e-19
     qe = 0.192 # @ 501nm
     gain = get_gain(applied_volts)
     photons = np.fabs(volts_seconds) / (impedence * eV * gain * qe)

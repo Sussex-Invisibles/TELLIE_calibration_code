@@ -20,12 +20,13 @@ import sweep
 import scopes
 import scope_connections
 import utils
+import numpy as np
 
 if __name__=="__main__":
     parser = optparse.OptionParser()
     parser.add_option("-b",dest="box",help="Box number (1-12)")
     parser.add_option("-c",dest="channel",help="Channel number (1-8)")
-    parser.add_option("-s",dest="step",default=100,help="Step size (defaults to 100 ADC units)")
+    parser.add_option("-s",dest="step",default=250,help="Step size (defaults to 100 ADC units)")
     (options,args) = parser.parse_args()
 
     #Time
@@ -68,7 +69,7 @@ if __name__=="__main__":
     scope.set_single_acquisition() # Single signal acquisition mode
     scope.set_record_length(record_length)
     scope.set_data_mode(half_length-350, half_length+300)
-    scope.set_edge_trigger(0.5, trig_chan, falling=False)
+    scope.set_edge_trigger(1, trig_chan, falling=False)
     scope.lock()
     scope.begin() # Acquires the pre-amble! 
 
@@ -77,7 +78,6 @@ if __name__=="__main__":
     saveDir = sweep.check_dir("broad_sweep/Box_%02d/" % (box))
     sweep.check_dir("%sraw_data/" % saveDir)
     output_filename = "%s/Chan%02d_IPWbroad_%s.dat" % (saveDir,channel,timestamp)
-    #results = utils.PickleFile(output_filename, 1)
     
     output_file = file(output_filename,'w')
     output_file.write("#PWIDTH\tPWIDTH Error\tPIN\tPIN Error\tWIDTH\tWIDTH Error\tRISE\tRISE Error\tFALL\tFALL Error\tAREA\tAREA Error\tMinimum\tMinimum Error\n")
@@ -98,23 +98,23 @@ if __name__=="__main__":
             if min_volt == 0: # If bad data set, make none
                 min_volt = 50e-3 # Used to be None - changed for speed up!
         tmpResults = sweep.sweep(saveDir,box,channel,width,scope,min_volt=min_volt)
-                
-        #results.set_meta_data("area", tmpResults["area"])
-        #results.set_meta_data("area error", tmpResults["area error"])
 
-        output_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n"%(width, 0,
+        output_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n"%(width, 0,
                                             tmpResults["pin"], tmpResults["pin error"],
                                             tmpResults["width"], tmpResults["width error"],
                                             tmpResults["rise"], tmpResults["rise error"],
                                             tmpResults["fall"], tmpResults["fall error"],
                                             tmpResults["area"], tmpResults["area error"],
-                                            tmpResults["peak"], tmpResults["peak error"] ))
+                                            tmpResults["peak"], tmpResults["peak error"],
+                                            tmpResults["time"], tmpResults["time error"]))
 
         print "WIDTH %d took : %1.1f s" % (width, time.time()-loopStart)
+        
+        # If recorded pulses are consistent with zero, break.
+        #if np.abs(tmpResults["peak"]) < 0.05:
+        #    break
 
+    # Close file and exit
     output_file.close()
-    #results.save()
-    #results.close()
-
     print "Total script time : %1.1f mins"%( (time.time() - total_time) / 60)
     
