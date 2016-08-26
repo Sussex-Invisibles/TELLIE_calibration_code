@@ -63,10 +63,6 @@ if __name__=="__main__":
     #Fixed parameters
     delay = 1.0 # 1ms -> kHz
     widths = calc_low_sweep_range(options.box, options.channel)
-    print widths
-    sys.exit()
-    #widths = range(cutoff-450,cutoff+361,15)
-    #widths = range(cutoff-900,cutoff+601,30)
 
     #run the initial setup on the scope
     usb_conn = scope_connections.VisaUSB()
@@ -124,8 +120,8 @@ if __name__=="__main__":
             min_volt = float(tmpResults["peak"])
             if min_volt == 0: # If bad data set, make none
                 min_volt = 50e-3 # Used to be None - Changed for speed-up!
-        tmpResults = sweep.sweep(saveDir,box,channel,width,delay,scope,min_volt)
-                
+        tmpResults = sweep.sweep(saveDir,box,channel,width,scope,min_volt=min_volt)                
+
         # Write results to file
         output_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n"%(width, 0,
                                             tmpResults["pin"], tmpResults["pin error"],
