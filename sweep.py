@@ -32,6 +32,8 @@ _v_div_1 = np.asarray([20e-3, 50e-3, 100e-3, 200e-3, 500e-3, 1, 2])
 sc = None
 sc = serial_command.SerialCommand(port_name)
 
+pulse_edge = None
+
 #initialise sc here, faster options setting
 def start():
     global sc
@@ -104,7 +106,6 @@ def find_and_set_scope_y_scale(trig_chan, pmt_chan, scope, scaleGuess=None):
     func_time = time.time()
     sc.enable_external_trig()
     time.sleep(0.1)
-
 
     # Trigger off trigger signal
     scope.set_edge_trigger(0.5, trig_chan, falling=False)
@@ -188,6 +189,14 @@ def printParamsDict(dict, name):
     print "-"
     print "Pulse sep \t= %1.2f +/- %1.2f ns" % (time*1e9, timeStd*1e9)
 
+def find_pulse(x, y, step_back = 50, step_forward = 200):
+    """Use differential to find the PMT pulse in the long trace"""
+    global pulse_edge
+    if pulse_edge == None:
+        pulse_edge = np.where(y[1,:] < -0.1)[0][0]
+        print pulse_edge
+    return x[pulse_edge-step_back:pulse_edge+step_forward], y[:,pulse_edge-step_back:pulse_edge+step_forward]
+
 def sweep(dir_out,box,channel,width,scope,min_volt=None):
     """Perform a measurement using a default number of
     pulses, with user defined width, channel and rate settings.
@@ -241,12 +250,13 @@ def sweep(dir_out,box,channel,width,scope,min_volt=None):
             # Calc and return params
             x1,y1 = calc.readPickleChannel(fname, 1)
             x2,y2 = calc.readPickleChannel(fname, 2)
-            calc.plot_eg_pulses(x2,y2,10, fname='%s/LastMeasuredPulses.png' % dir_out.split("/")[0])
-            #os.system("open %s/LastMeasuredPulses.png" % dir_out.split("/")[0])
+            x2,y2 = find_pulse(x2,y2)
+            calc.plot_eg_pulses(x2, y2, 10, fname='%s/LastMeasuredPulses.png' % dir_out.split("/")[0])
+            os.system("open %s/LastMeasuredPulses.png" % dir_out.split("/")[0])
             # Make sure we see a signal well above noise
-            snr = calc.calcSNR(x2,y2)
+            snr = calc.calcSNR(x2, y2)
             print "SNR: ", snr
-            if snr > 5:
+            if snr > 7:
                 # Calculate results
                 results = calc.dictionary_of_params(x2,y2)
                 mean, std, sterr = calc.calcJitter(x2, y2, x1, y1, threshold=0.4)

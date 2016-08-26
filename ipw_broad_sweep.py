@@ -68,7 +68,7 @@ if __name__=="__main__":
     scope.set_channel_termination(pmt_chan, termination)
     scope.set_single_acquisition() # Single signal acquisition mode
     scope.set_record_length(record_length)
-    scope.set_data_mode(half_length-350, half_length+300)
+    scope.set_data_mode(half_length-350, half_length+650)
     scope.set_edge_trigger(1, trig_chan, falling=False)
     scope.lock()
     scope.begin() # Acquires the pre-amble! 
