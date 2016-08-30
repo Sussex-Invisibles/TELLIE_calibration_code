@@ -1,14 +1,5 @@
-###################################################
-# Pulses TELLIE in continuous mode.
-# This script produces a continuous
-# signal to allow for adjustments of
-# the PIN diode pots.
-# 
-# Author: Ed Leming <e.leming09@googlemail.com>
-# Date: 01/05/15
-###################################################
+### sends a continuous pulse
 from core import serial_command
-import optparse
 import sys
 
 def safe_exit(sc,e):
@@ -17,24 +8,21 @@ def safe_exit(sc,e):
     sc.stop()
 
 if __name__=="__main__":
-    parser = optparse.OptionParser()
-    parser.add_option("-b",dest="box",help="Box number (1-12)")
-    parser.add_option("-c",dest="channel",help="Channel number (1-8)")
-    parser.add_option("-w",dest="width",default=0,help="IPW setting (0-16383)")
-    (options,args) = parser.parse_args()
-
-    width = int(options.width)
-    channel = (int(options.box)-1)*8 + int(options.channel)
-    width = int(options.width)
-    sc = serial_command.SerialCommand("/dev/tty.usbserial-FTE3C0PG")
+    width = sys.argv[1]
+    #rate = sys.argv[3]
+    channel = sys.argv[2]
+    width = int(width)
+    #rate = float(rate)
+    channel = int(channel)
+    print width#, rate
+    sc = serial_command.SerialCommand("/dev/tty.usbserial-FTGA2OCZ")
     sc.stop()
     sc.select_channel(channel)
     sc.set_pulse_height(16383)
     sc.set_pulse_width(width)
-    sc.set_pulse_delay(0.1)
-    #sc.set_pulse_delay(25e-3) 
+    #sc.set_pulse_delay(rate)
     try:
-        sc.fire_continuous()
+        sc.enable_external_trig()
         while True:
             pass
     except Exception,e:
