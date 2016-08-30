@@ -40,7 +40,7 @@ def read_scope_scan(fname):
         # re-write and append it fills with all the same object and so we have multiple copies
         # of the same result.
         resultsList.append({"ipw":int(bits[0]),"ipw_err": int(bits[1]),"pin":int(bits[2]),"pin_err":float(bits[3]),"width":float(bits[4]),"width_err":float(bits[5]),"rise":float(bits[6]),"rise_err":float(bits[7]),"fall":float(bits[8]),"fall_err":float(bits[9]),"area":float(bits[10]),"area_err":float(bits[11]),"mini":float(bits[12]),"mini_err":float(bits[13]),"time":float(bits[14]),"time_err":float(bits[15])})
-        return resultsList
+    return resultsList
 
 def clean_data(res_list):
     """Clean data of Inf and Nan's so as not to confuse plots"""
@@ -77,8 +77,7 @@ def get_gain(applied_volts):
        taken July 2015 at site.
        See smb://researchvols.uscs.susx.ac.uk/research/neutrino_lab/SnoPlus/PmtCal.
     """
-    a, b, c = 12.5531, 12.8764, -1276.0
-    #a, b, c = 545.1, 13.65, 0
+    a, b, c = 12.5531, 12.8764, -1276.2
     gain = a*np.exp(b*applied_volts) + c
     return gain
 
