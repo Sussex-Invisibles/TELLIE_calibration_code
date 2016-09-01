@@ -43,7 +43,7 @@ def calc_low_sweep_range(box, channel):
         photons[i] = plot_ipw.get_photons(results[i]["area"], 0.5)
     idx = np.where( photons < 1e5 )[0][0] - 1
     width_thresh = results[idx]["ipw"]
-    return range(width_thresh, width_thresh+1200, 25)
+    return range(width_thresh, width_thresh+1600, 25)
 
 if __name__=="__main__":
     parser = optparse.OptionParser()
@@ -93,7 +93,7 @@ if __name__=="__main__":
     scope.set_channel_termination(pmt_chan, termination)
     scope.set_single_acquisition() # Single signal acquisition mode
     scope.set_record_length(record_length)
-    scope.set_data_mode(half_length-350, half_length+300)
+    scope.set_data_mode(half_length-800, half_length+300)
     scope.set_edge_trigger(1, trig_chan, falling=False)
     scope.lock()
     scope.begin() # Acquires the pre-amble! 

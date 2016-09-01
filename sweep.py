@@ -19,8 +19,8 @@ import readPklWaveFile
 import calc_utils as calc
 import numpy as np
 
-#port_name = "/dev/tty.usbserial-FTE3C0PG"
-port_name = "/dev/tty.usbserial-FTGA2OCZ"
+port_name = "/dev/tty.usbserial-FTE3C0PG"
+#port_name = "/dev/tty.usbserial-FTGA2OCZ"
 ## TODO: better way of getting the scope type
 scope_name = "Tektronix3000"
 _boundary = [0,1.5e-3,3e-3,7e-3,15e-3,30e-3,70e-3,150e-3,300e-3,700e-3,1000]
@@ -73,7 +73,7 @@ def return_zero_result():
 
 def save_scopeTraces(fileName, scope, channels, noPulses):
     """Save a number of scope traces to file - uses compressed .pkl"""
-    scope._get_preamble(channels[-1])
+    scope._get_preamble(channels[0])
     results = utils.PickleFile(fileName, len(channels))
     results.add_meta_data("timeform_1", scope.get_timeform(channels[0]))
 
@@ -189,7 +189,7 @@ def printParamsDict(dict, name):
     print "-"
     print "Pulse sep \t= %1.2f +/- %1.2f ns" % (time*1e9, timeStd*1e9)
 
-def find_pulse(x, y, step_back = 50, step_forward = 200):
+def find_pulse(x, y, step_back = 500, step_forward = 500):
     """Use differential to find the PMT pulse in the long trace"""
     global pulse_edge
     if pulse_edge == None:
@@ -250,7 +250,7 @@ def sweep(dir_out,box,channel,width,scope,min_volt=None):
             # Calc and return params
             x1,y1 = calc.readPickleChannel(fname, 1)
             x2,y2 = calc.readPickleChannel(fname, 2)
-            x2,y2 = find_pulse(x2,y2)
+            #x2,y2 = find_pulse(x2,y2)
             calc.plot_eg_pulses(x2, y2, 10, fname='%s/LastMeasuredPulses.png' % dir_out.split("/")[0])
             os.system("open %s/LastMeasuredPulses.png" % dir_out.split("/")[0])
             # Make sure we see a signal well above noise
