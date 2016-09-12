@@ -68,7 +68,7 @@ if __name__=="__main__":
     scope.set_channel_termination(pmt_chan, termination)
     scope.set_single_acquisition() # Single signal acquisition mode
     scope.set_record_length(record_length)
-    scope.set_data_mode(half_length-350, half_length+650)
+    scope.set_data_mode(half_length-800, half_length+300)
     scope.set_edge_trigger(1, trig_chan, falling=False)
     scope.lock()
     scope.begin() # Acquires the pre-amble! 
@@ -83,8 +83,8 @@ if __name__=="__main__":
     output_file.write("#PWIDTH\tPWIDTH Error\tPIN\tPIN Error\tWIDTH\tWIDTH Error\tRISE\tRISE Error\tFALL\tFALL Error\tAREA\tAREA Error\tMinimum\tMinimum Error\n")
 
     #Start scanning!
-    #widths = range(0,10000,step)
-    widths = range(7600,10000,step)
+    widths = range(0,10000,step)
+    #widths = range(7600,10000,step)
     tmpResults = None
 
     t_start = time.time()
