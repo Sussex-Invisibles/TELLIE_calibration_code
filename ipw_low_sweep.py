@@ -45,6 +45,9 @@ def calc_low_sweep_range(box, channel):
     width_thresh = results[idx]["ipw"]
     return range(width_thresh, width_thresh+1600, 25)
 
+def calc_start_ipw(box,channel):
+    return calc_low_sweep_range(box,channel)[0]
+
 if __name__=="__main__":
     parser = optparse.OptionParser()
     parser.add_option("-b",dest="box",type=int,help="Box number (1-12)")
@@ -62,7 +65,6 @@ if __name__=="__main__":
 
     #Fixed parameters
     delay = 1.0 # 1ms -> kHz
-    widths = calc_low_sweep_range(options.box, options.channel)
 
     #run the initial setup on the scope
     usb_conn = scope_connections.VisaUSB()
@@ -107,12 +109,11 @@ if __name__=="__main__":
     
     output_file = file(output_filename,'w')
     output_file.write("#PWIDTH\tPWIDTH Error\tPIN\tPIN Error\tWIDTH\tWIDTH Error\tRISE\tRISE Error\tFALL\tFALL Error\tAREA\tAREA Error\tMinimum\tMinimum Error\tTime\tTime Error\n")
-    firstIter = True
     #Start scanning!
     tmpResults = {}
     t_start = time.time()
     tmpResults["peak"] = -1.0
-    widths = [widths[0]]
+    widths = [calc_start_ipw(box,channel)]
     while tmpResults["peak"] < -0.05:
         widths.append(widths[-1]+50)
         width = widths[-1]

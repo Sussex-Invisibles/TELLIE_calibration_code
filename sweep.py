@@ -74,9 +74,9 @@ def return_zero_result():
 
 def save_scopeTraces(fileName, scope, channels, noPulses):
     """Save a number of scope traces to file - uses compressed .pkl"""
-    scope._get_preamble(channels[0])
+    scope._get_preamble(channels[-1])
     results = utils.PickleFile(fileName, len(channels))
-    results.add_meta_data("timeform_1", scope.get_timeform(channels[-1]))
+    results.add_meta_data("timeform_1", scope.get_timeform(channels[0]))
 
     #ct = scope.acquire_time_check()
     #if ct == False:
