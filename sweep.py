@@ -251,16 +251,7 @@ def sweep(dir_out,box,channel,width,scope,min_volt=None):
             # Calc and return params
             x1,y1 = calc.readPickleChannel(fname, 1)
             x2,y2 = calc.readPickleChannel(fname, 2)
-	    #plt.figure(20)
-            #plt.plot(x1,np.mean(y1,0),label="trigger")
             #x2,y2 = find_pulse(x2,y2)
-            #plt.plot(x2,np.mean(y2,0),label="pmt")
-	    #plt.legend(loc="lower right")
-	    #plt.show()
-	    #plt.figure(21)
-            #plt.title("PMT pulse after peak finding")
-	    #plt.plot(x2,np.mean(y2,0))
-	    #plt.show()
             calc.plot_eg_pulses(x2, y2, 10, fname='%s/LastMeasuredPulses.png' % dir_out.split("/")[0])
             os.system("open %s/LastMeasuredPulses.png" % dir_out.split("/")[0])
             # Make sure we see a signal well above noise
