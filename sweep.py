@@ -76,7 +76,7 @@ def save_scopeTraces(fileName, scope, channels, noPulses):
     """Save a number of scope traces to file - uses compressed .pkl"""
     scope._get_preamble(channels[0])
     results = utils.PickleFile(fileName, len(channels))
-    results.add_meta_data("timeform_1", scope.get_timeform(channels[0]))
+    results.add_meta_data("timeform_1", scope.get_timeform(channels[-1]))
 
     #ct = scope.acquire_time_check()
     #if ct == False:
@@ -119,7 +119,7 @@ def find_and_set_scope_y_scale(trig_chan, pmt_chan, scope, scaleGuess=None):
     #else:
     #scope.set_channel_y(pmt_chan, _v_div[-1], pos=3)     
 
-    time.sleep(0.5) # Need to wait for scope to recognise new settings
+    time.sleep(1.0) # Need to wait for scope to recognise new settings
     scope._get_preamble(pmt_chan)
 
     # Calc min value
@@ -153,6 +153,8 @@ def find_and_set_scope_y_scale(trig_chan, pmt_chan, scope, scaleGuess=None):
     
     # Set scale and return
     scope.set_channel_y(pmt_chan, scale, pos=3) # set scale, starting with largest
+    time.sleep(1.0) # Need to wait for scope to recognise new settings
+    scope._get_preamble(pmt_chan)
     print "TOTAL FUNC TIME = %1.2f s" % (time.time() - func_time)
     sc.disable_external_trigger()
     return True

@@ -107,12 +107,15 @@ if __name__=="__main__":
     
     output_file = file(output_filename,'w')
     output_file.write("#PWIDTH\tPWIDTH Error\tPIN\tPIN Error\tWIDTH\tWIDTH Error\tRISE\tRISE Error\tFALL\tFALL Error\tAREA\tAREA Error\tMinimum\tMinimum Error\tTime\tTime Error\n")
-    widths = [widths[0]]+widths
     firstIter = True
     #Start scanning!
-    tmpResults = None
+    tmpResults = {}
     t_start = time.time()
-    for width in widths:
+    tmpResults["peak"] = -1.0
+    widths = [widths[0]]
+    while tmpResults["peak"] < -0.05:
+        widths.append(widths[-1]+50)
+        width = widths[-1]
         min_volt = None
         loopStart = time.time()
         if tmpResults!=None:
@@ -122,12 +125,8 @@ if __name__=="__main__":
             if min_volt == 0: # If bad data set, make none
                 min_volt = 50e-3 # Used to be None - Changed for speed-up!
         tmpResults = sweep.sweep(saveDir,box,channel,width,scope,min_volt=min_volt)                
-	if firstIter:
-            firstIter = False
-	    continue
-        else:
         # Write results to file
-	    output_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n"%(width, 0,
+	output_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n"%(width, 0,
                                             tmpResults["pin"], tmpResults["pin error"],
                                             tmpResults["width"], tmpResults["width error"],
                                             tmpResults["rise"], tmpResults["rise error"],

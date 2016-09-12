@@ -218,6 +218,12 @@ if __name__=="__main__":
 
     res_list = read_scope_scan(options.file)
     res_list = clean_data(res_list)
+    #Slice res_list upto where area=0
+    cutIter = 0
+    for cutIter in range(0,len(res_list)):
+	if res_list[cutIter]["area"] == 0:
+	    break
+    res_list = res_list[:cutIter-3]
 
     #make plots!
     photon_vs_pin = ROOT.TGraphErrors()
