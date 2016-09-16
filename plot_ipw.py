@@ -370,6 +370,7 @@ if __name__=="__main__":
     fall_vs_photon.Write()
     fall_vs_ipw.Write()
     time_vs_ipw.Write()
+    pin_vs_ipw.Write()
 
     out_dir = os.path.join(sweep_type,"plots/")
     master_name = "%sChan%02d_%s.pdf" % (out_dir, logical_channel, sweep_type)
