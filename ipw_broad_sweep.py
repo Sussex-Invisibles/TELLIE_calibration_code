@@ -44,7 +44,7 @@ if __name__=="__main__":
     scope = scopes.Tektronix3000(usb_conn)
     ###########################################
     trig_chan = 1 # Which channel is the trigger in?
-    pmt_chan = 2 # Which channel is the pmt in?
+    pmt_chan = 4 # Which channel is the pmt in?
     termination = 50 # Ohms
     trigger_level = 0.5 # half peak minimum
     falling_edge = True
@@ -97,8 +97,7 @@ if __name__=="__main__":
             min_volt = float(tmpResults["peak"])
             if min_volt == 0: # If bad data set, make none
                 min_volt = 50e-3 # Used to be None - changed for speed up!
-        tmpResults = sweep.sweep(saveDir,box,channel,width,scope,min_volt=min_volt)
-
+        tmpResults = sweep.sweep(saveDir,box,channel,width,scope,trig_chan,pmt_chan,min_volt=min_volt)
         output_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n"%(width, 0,
                                             tmpResults["pin"], tmpResults["pin error"],
                                             tmpResults["width"], tmpResults["width error"],

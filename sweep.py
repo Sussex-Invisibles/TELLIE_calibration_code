@@ -75,7 +75,7 @@ def return_zero_result():
 def save_scopeTraces(fileName, scope, channels, noPulses):
     """Save a number of scope traces to file - uses compressed .pkl"""
     scope._get_preamble(channels[0])
-    results = utils.PickleFile(fileName, len(channels))
+    results = utils.PickleFile(fileName, channels)
     results.add_meta_data("timeform_1", scope.get_timeform(channels[0]))
 
     #ct = scope.acquire_time_check()
@@ -88,8 +88,8 @@ def save_scopeTraces(fileName, scope, channels, noPulses):
     t_start, loopStart = time.time(),time.time()
     for i in range(noPulses):
         try:
-            for chan in channels:
-                results.add_data(scope.get_waveform(chan), chan)
+    	    for chan in channels:
+	        results.add_data(scope.get_waveform(chan), chan)
         except Exception, e:
             print "Scope died, acquisition lost."
             print e
@@ -119,7 +119,7 @@ def find_and_set_scope_y_scale(trig_chan, pmt_chan, scope, scaleGuess=None):
     #else:
     #scope.set_channel_y(pmt_chan, _v_div[-1], pos=3)     
 
-    time.sleep(0.5) # Need to wait for scope to recognise new settings
+    time.sleep(1.5) # Need to wait for scope to recognise new settings
     scope._get_preamble(pmt_chan)
 
     # Calc min value
@@ -153,6 +153,8 @@ def find_and_set_scope_y_scale(trig_chan, pmt_chan, scope, scaleGuess=None):
     
     # Set scale and return
     scope.set_channel_y(pmt_chan, scale, pos=3) # set scale, starting with largest
+    time.sleep(1.0) # Need to wait for scope to recognise new settings
+    scope._get_preamble(pmt_chan)
     print "TOTAL FUNC TIME = %1.2f s" % (time.time() - func_time)
     sc.disable_external_trigger()
     return True
@@ -198,7 +200,7 @@ def find_pulse(x, y, step_back = 500, step_forward = 500):
         print pulse_edge
     return x[pulse_edge-step_back:pulse_edge+step_forward], y[:,pulse_edge-step_back:pulse_edge+step_forward]
 
-def sweep(dir_out,box,channel,width,scope,min_volt=None):
+def sweep(dir_out,box,channel,width,scope,trig_channel,pmt_channel,min_volt=None):
     """Perform a measurement using a default number of
     pulses, with user defined width, channel and rate settings.
     """
@@ -240,20 +242,20 @@ def sweep(dir_out,box,channel,width,scope,min_volt=None):
     fname = "%sWidth%05d" % (directory,width)
     
     # Check scope
-    ck = find_and_set_scope_y_scale(1, 2, scope, scaleGuess=min_volt)
+    ck = find_and_set_scope_y_scale(trig_channel, pmt_channel, scope, scaleGuess=min_volt)
     if ck == True:
         print "Saving raw files to: %s..." % fname
         sc.enable_external_trig()
         time.sleep(0.2)
-        save_ck = save_scopeTraces(fname, scope, [1,2], 100)
+        save_ck = save_scopeTraces(fname, scope, [trig_channel,pmt_channel], 100)
         sc.stop()
         if save_ck == True:
             # Calc and return params
-            x1,y1 = calc.readPickleChannel(fname, 1)
-            x2,y2 = calc.readPickleChannel(fname, 2)
+            x1,y1 = calc.readPickleChannel(fname, trig_channel,[trig_channel,pmt_channel])
+            x2,y2 = calc.readPickleChannel(fname, pmt_channel,[trig_channel,pmt_channel])
             #x2,y2 = find_pulse(x2,y2)
             calc.plot_eg_pulses(x2, y2, 10, fname='%s/LastMeasuredPulses.png' % dir_out.split("/")[0])
-            os.system("open %s/LastMeasuredPulses.png" % dir_out.split("/")[0])
+            #os.system("open %s/LastMeasuredPulses.png" % dir_out.split("/")[0])
             # Make sure we see a signal well above noise
             snr = calc.calcSNR(x2, y2)
             print "SNR: ", snr

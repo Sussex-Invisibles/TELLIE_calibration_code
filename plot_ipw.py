@@ -192,6 +192,8 @@ if __name__=="__main__":
     parser = optparse.OptionParser()
     parser.add_option("-f", dest="file")
     parser.add_option("-s", dest="scope", default="Tektronix")
+    #How many steps to cut off at the low intensity end of the data until the PMT pulse is distinguishable
+    parser.add_option("-x", dest="cutSteps",default=0)
     (options,args) = parser.parse_args()
     
     if options.scope!="Tektronix" and options.scope!="LeCroy":
@@ -218,6 +220,12 @@ if __name__=="__main__":
 
     res_list = read_scope_scan(options.file)
     res_list = clean_data(res_list)
+    #Slice res_list upto where area=0
+    cutIter = 0
+    for cutIter in range(0,len(res_list)):
+	if res_list[cutIter]["area"] == 0:
+	    break
+    res_list = res_list[:cutIter-int(options.cutSteps)]
 
     #make plots!
     photon_vs_pin = ROOT.TGraphErrors()
@@ -375,4 +383,4 @@ if __name__=="__main__":
     fout.Close()
 
     time.sleep(2)
-    os.system("open %s"% master_name)  
+    #os.system("open %s"% master_name)  
