@@ -119,7 +119,7 @@ def find_and_set_scope_y_scale(trig_chan, pmt_chan, scope, scaleGuess=None):
     #else:
     #scope.set_channel_y(pmt_chan, _v_div[-1], pos=3)     
 
-    time.sleep(1.5) # Need to wait for scope to recognise new settings
+    time.sleep(1.0) # Need to wait for scope to recognise new settings
     scope._get_preamble(pmt_chan)
 
     # Calc min value
