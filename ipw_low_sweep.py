@@ -109,21 +109,13 @@ if __name__=="__main__":
     
     output_file = file(output_filename,'w')
     output_file.write("#PWIDTH\tPWIDTH Error\tPIN\tPIN Error\tWIDTH\tWIDTH Error\tRISE\tRISE Error\tFALL\tFALL Error\tAREA\tAREA Error\tMinimum\tMinimum Error\tTime\tTime Error\n")
-<<<<<<< HEAD
     firstIter = True
-=======
->>>>>>> 36b8bfeac42bbaa449d203f9a709451a3f783479
     #Start scanning!
     tmpResults = {}
     t_start = time.time()
     tmpResults["peak"] = -1.0
-<<<<<<< HEAD
-    widths = [widths[0]]
-    while tmpResults["peak"] < -0.01:
-=======
     widths = [calc_start_ipw(box,channel)]
     while tmpResults["peak"] < -0.05:
->>>>>>> 36b8bfeac42bbaa449d203f9a709451a3f783479
         widths.append(widths[-1]+50)
         width = widths[-1]
         min_volt = None
@@ -134,11 +126,8 @@ if __name__=="__main__":
             min_volt = float(tmpResults["peak"])
             if min_volt == 0: # If bad data set, make none
                 min_volt = 50e-3 # Used to be None - Changed for speed-up!
-<<<<<<< HEAD
         tmpResults = sweep.sweep(saveDir,box,channel,width,scope,trig_chan,pmt_chan,min_volt=min_volt)                
-=======
         tmpResults = sweep.sweep(saveDir,box,channel,width,scope,min_volt=min_volt)                
->>>>>>> 36b8bfeac42bbaa449d203f9a709451a3f783479
         # Write results to file
 	output_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n"%(width, 0,
                                             tmpResults["pin"], tmpResults["pin error"],

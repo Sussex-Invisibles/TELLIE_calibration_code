@@ -225,11 +225,7 @@ if __name__=="__main__":
     for cutIter in range(0,len(res_list)):
 	if res_list[cutIter]["area"] == 0:
 	    break
-<<<<<<< HEAD
     res_list = res_list[:cutIter-int(options.cutSteps)]
-=======
-    res_list = res_list[:cutIter-3]
->>>>>>> 36b8bfeac42bbaa449d203f9a709451a3f783479
 
     #make plots!
     photon_vs_pin = ROOT.TGraphErrors()
