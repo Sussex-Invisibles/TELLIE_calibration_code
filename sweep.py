@@ -198,7 +198,16 @@ def find_pulse(x, y, step_back = 500, step_forward = 500):
     if pulse_edge == None:
         pulse_edge = np.where(y[1,:] < -0.1)[0][0]
         print pulse_edge
-    return x[pulse_edge-step_back:pulse_edge+step_forward], y[:,pulse_edge-step_back:pulse_edge+step_forward]
+    Return x[pulse_edge-step_back:pulse_edge+step_forward], y[:,pulse_edge-step_back:pulse_edge+step_forward]
+
+
+def find_pulse_2(x, y, step_back = 50, step_forward = 50):
+    """Method to find the pulse by looking for the minima of the trace"""
+    meany = np.mean(y,axis=0)
+    print "Len meany: "+str(len(meany))
+    print "Len x: "+str(len(x))
+    minIndex = np.argmin(meany)
+    return x[minIndex-step_back:minIndex+step_forward], y[:,minIndex-step_back:minIndex+step_forward]
 
 def sweep(dir_out,box,channel,width,scope,trig_channel,pmt_channel,min_volt=None):
     """Perform a measurement using a default number of
@@ -253,7 +262,7 @@ def sweep(dir_out,box,channel,width,scope,trig_channel,pmt_channel,min_volt=None
             # Calc and return params
             x1,y1 = calc.readPickleChannel(fname, trig_channel,[trig_channel,pmt_channel])
             x2,y2 = calc.readPickleChannel(fname, pmt_channel,[trig_channel,pmt_channel])
-            #x2,y2 = find_pulse(x2,y2)
+            x2,y2 = find_pulse_2(x2,y2)
             calc.plot_eg_pulses(x2, y2, 10, fname='%s/LastMeasuredPulses.png' % dir_out.split("/")[0])
             #os.system("open %s/LastMeasuredPulses.png" % dir_out.split("/")[0])
             # Make sure we see a signal well above noise
