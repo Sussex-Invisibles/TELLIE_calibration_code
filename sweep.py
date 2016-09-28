@@ -198,10 +198,10 @@ def find_pulse(x, y, step_back = 500, step_forward = 500):
     if pulse_edge == None:
         pulse_edge = np.where(y[1,:] < -0.1)[0][0]
         print pulse_edge
-    Return x[pulse_edge-step_back:pulse_edge+step_forward], y[:,pulse_edge-step_back:pulse_edge+step_forward]
+    return x[pulse_edge-step_back:pulse_edge+step_forward], y[:,pulse_edge-step_back:pulse_edge+step_forward]
 
 
-def find_pulse_2(x, y, step_back = 50, step_forward = 50):
+def find_pulse_2(x, y, step_back = 100, step_forward = 100):
     """Method to find the pulse by looking for the minima of the trace"""
     meany = np.mean(y,axis=0)
     print "Len meany: "+str(len(meany))

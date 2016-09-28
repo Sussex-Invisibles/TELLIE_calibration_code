@@ -46,6 +46,7 @@ def calc_low_sweep_range(box, channel):
     return range(width_thresh, width_thresh+1600, 25)
 
 def calc_start_ipw(box,channel):
+    print calc_low_sweep_range(box,channel)
     return calc_low_sweep_range(box,channel)[0]
 
 if __name__=="__main__":
@@ -127,7 +128,6 @@ if __name__=="__main__":
             if min_volt == 0: # If bad data set, make none
                 min_volt = 50e-3 # Used to be None - Changed for speed-up!
         tmpResults = sweep.sweep(saveDir,box,channel,width,scope,trig_chan,pmt_chan,min_volt=min_volt)                
-        tmpResults = sweep.sweep(saveDir,box,channel,width,scope,min_volt=min_volt)                
         # Write results to file
 	output_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n"%(width, 0,
                                             tmpResults["pin"], tmpResults["pin error"],
