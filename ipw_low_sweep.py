@@ -127,7 +127,7 @@ if __name__=="__main__":
             min_volt = float(tmpResults["peak"])
             if min_volt == 0: # If bad data set, make none
                 min_volt = 50e-3 # Used to be None - Changed for speed-up!
-        tmpResults = sweep.sweep(saveDir,box,channel,width,scope,trig_chan,pmt_chan,min_volt=min_volt)                
+        tmpResults = sweep.sweep(saveDir,box,channel,width,scope,trig_chan,pmt_chan,min_volt=min_volt,boxSwap=False)                
         # Write results to file
 	output_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n"%(width, 0,
                                             tmpResults["pin"], tmpResults["pin error"],
