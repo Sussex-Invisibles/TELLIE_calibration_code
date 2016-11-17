@@ -209,6 +209,28 @@ def find_pulse_2(x, y, step_back = 100, step_forward = 100):
     minIndex = np.argmin(meany)
     return x[minIndex-step_back:minIndex+step_forward], y[:,minIndex-step_back:minIndex+step_forward]
 
+def find_pulse_3(x,y, noise_factor=1.5, step_back=5, step_forward=5):
+    """Method to find the pulse by looking for the minima of the trace"""
+    meany = np.mean(y,axis=0)
+    minIndex = np.argmin(meany)
+    #Look at noise by examining trace 40ns before PMT pulse
+    noiseIndex = minIndex-100
+    maxNoise = np.amax(np.fabs(y[:,:noiseIndex]))
+    lowerIndex = 0
+    upperIndex = 0
+    #Find lower limit
+    for ind in range(minIndex,-1,-1):
+        if np.fabs(meany[ind]) < noise_factor*maxNoise:
+           lowerIndex = ind-step_back
+           break
+    
+    for ind in range(minIndex,len(meany)):
+        if np.fabs(meany[ind]) < noise_factor*maxNoise:
+           upperIndex = ind+step_forward
+           break
+	
+    return x[lowerIndex:upperIndex], y[:,lowerIndex:upperIndex]
+
 def sweep(dir_out,box,channel,width,scope,trig_channel,pmt_channel,min_volt=None):
     """Perform a measurement using a default number of
     pulses, with user defined width, channel and rate settings.
@@ -262,7 +284,7 @@ def sweep(dir_out,box,channel,width,scope,trig_channel,pmt_channel,min_volt=None
             # Calc and return params
             x1,y1 = calc.readPickleChannel(fname, trig_channel,[trig_channel,pmt_channel])
             x2,y2 = calc.readPickleChannel(fname, pmt_channel,[trig_channel,pmt_channel])
-            x2,y2 = find_pulse_2(x2,y2)
+            x2Cut,y2Cut = find_pulse_3(x2,y2)
             calc.plot_eg_pulses(x2, y2, 10, fname='%s/LastMeasuredPulses.png' % dir_out.split("/")[0])
             #os.system("open %s/LastMeasuredPulses.png" % dir_out.split("/")[0])
             # Make sure we see a signal well above noise
@@ -270,8 +292,8 @@ def sweep(dir_out,box,channel,width,scope,trig_channel,pmt_channel,min_volt=None
             print "SNR: ", snr
             if snr > 7:
                 # Calculate results
-                results = calc.dictionary_of_params(x2,y2)
-                mean, std, sterr = calc.calcJitter(x2, y2, x1, y1, threshold=0.4)
+                results = calc.dictionary_of_params(x2Cut,y2Cut)
+                mean, std, sterr = calc.calcJitter(x2Cut, y2Cut, x1, y1, threshold=0.4)
                 results["time"] = mean
                 results["time error"] = std
                 results["pin"] = pin

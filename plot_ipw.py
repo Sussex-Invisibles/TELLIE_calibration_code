@@ -45,10 +45,10 @@ def read_scope_scan(fname):
 def clean_data(res_list):
     """Clean data of Inf and Nan's so as not to confuse plots"""
     for i in range(len(res_list)):
-        if np.isfinite(res_list[i]["rise"]) == False:
+        if np.isfinite(res_list[i]["rise"]) == False or res_list[i]["rise"] > 100e-9:
             res_list[i]["rise"] = 0
             res_list[i]["rise_err"] = 0
-        if np.isfinite(res_list[i]["fall"]) == False:
+        if np.isfinite(res_list[i]["fall"]) == False or res_list[i]["fall"] > 100e-9:
             res_list[i]["fall"] = 0
             res_list[i]["fall_err"] = 0
         if np.isfinite(res_list[i]["width"]) == False:
@@ -77,9 +77,13 @@ def get_gain(applied_volts):
        taken July 2015 at site.
        See smb://researchvols.uscs.susx.ac.uk/research/neutrino_lab/SnoPlus/PmtCal.
     """
-    a, b, c = 12.5531, 12.8764, -1276.2
+    '''a, b, c = 12.5531, 12.8764, -1276.2
     gain = a*np.exp(b*applied_volts) + c
-    return gain
+    return gain'''
+    if applied_volts == 0.5:
+        return 5.651e+03
+    if applied_volts == 0.7:
+        return 1.021e+05
 
 def get_scope_response(applied_volts):
     """Get the system timing response"""
@@ -189,6 +193,8 @@ def master_plot(fname, ph_ipw, w_ipw, r_ipw, f_ipw, pin_ipw, ph_pin, cutoff=None
     return nCan
     
 if __name__=="__main__":
+    #Set in batch mode to stop showing windows
+    ROOT.gROOT.SetBatch(True)
     parser = optparse.OptionParser()
     parser.add_option("-f", dest="file")
     parser.add_option("-s", dest="scope", default="Tektronix")
@@ -225,7 +231,7 @@ if __name__=="__main__":
     for cutIter in range(0,len(res_list)):
 	if res_list[cutIter]["area"] == 0:
 	    break
-    res_list = res_list[:cutIter-int(options.cutSteps)]
+    res_list = res_list[:cutIter-int(options.cutSteps)+1]
 
     #make plots!
     photon_vs_pin = ROOT.TGraphErrors()
@@ -275,12 +281,20 @@ if __name__=="__main__":
         width_vs_photon.SetPointError(i,photon_err,width_time_err)
         width_vs_ipw.SetPoint(i,res_list[i]["ipw"],width_time)
         width_vs_ipw.SetPointError(i,res_list[i]["ipw_err"],width_time_err)
-        time_vs_ipw.SetPoint(i,res_list[i]["ipw"],pulse_sep)
-        time_vs_ipw.SetPointError(i,res_list[i]["ipw_err"],pulse_sep_err)
+        if np.isfinite(pulse_sep) and np.isfinite(pulse_sep_err) and pulse_sep != 0 and res_list[i]["ipw"] != 0:
+            time_vs_ipw.SetPoint(i,res_list[i]["ipw"],pulse_sep)
+            time_vs_ipw.SetPointError(i,res_list[i]["ipw_err"],pulse_sep_err)
         
         #For Cutoff calc
         w[i], ipw[i] = width_time, res_list[i]["ipw"]
         #print w[i], rise_time, fall_time
+    for i in range(time_vs_ipw.GetN()):
+        x = ROOT.Double(-1.0)
+        y = ROOT.Double(-1.0) 
+        time_vs_ipw.GetPoint(i,x,y)
+        print time_vs_ipw.GetPoint(i,x,y)
+        if np.isclose(float(x),0.0) and np.isclose(float(y),0.0):
+            time_vs_ipw.RemovePoint(i)
 
     set_style(pin_vs_ipw,1)
     set_style(photon_vs_pin,1)
@@ -359,7 +373,7 @@ if __name__=="__main__":
     can.Print("%s/width_vs_ipw.pdf"%output_dir)
 
     time_vs_ipw.Draw("ap")
-    can.Print("%s/time_vs_ipw.pdf"%output_dir)
+    can.Print("%s/Chan%d_time_vs_ipw.pdf"% (output_dir,logical_channel))
 
     fout = ROOT.TFile("%s/plots.root"%output_dir,"recreate")
     
