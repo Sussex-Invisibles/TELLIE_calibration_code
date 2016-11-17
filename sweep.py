@@ -231,7 +231,7 @@ def find_pulse_3(x,y, noise_factor=1.5, step_back=5, step_forward=5):
 	
     return x[lowerIndex:upperIndex], y[:,lowerIndex:upperIndex]
 
-def sweep(dir_out,box,channel,width,scope,trig_channel,pmt_channel,min_volt=None):
+def sweep(dir_out,box,channel,width,scope,trig_channel,pmt_channel,min_volt=None,boxSwap=False):
     """Perform a measurement using a default number of
     pulses, with user defined width, channel and rate settings.
     """
@@ -245,8 +245,12 @@ def sweep(dir_out,box,channel,width,scope,trig_channel,pmt_channel,min_volt=None
     pulse_number = 1000
     #first select the correct channel and provide settings
     logical_channel = (box-1)*8 + channel
-    
-    sc.select_channel(logical_channel)
+    #If boxSwap set to true we are using the lower ribbon port on the control box to controll the upper boxes
+    if boxSwap:
+	tellie_logical_chan   = (box-8)*8+channel
+	sc.select_channel(tellie_logical_chan)
+    else:
+	sc.select_channel(logical_channel)
     sc.set_pulse_width(width)
     sc.set_pulse_height(16383)
     sc.set_pulse_number(pulse_number)
