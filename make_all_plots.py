@@ -32,5 +32,5 @@ def make_plots(base_dir):
 
 
 if __name__=="__main__":
-	#make_plots("./broad_sweep")
+	make_plots("./broad_sweep")
 	make_plots("./low_intensity")

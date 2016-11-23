@@ -43,9 +43,9 @@ def calcEntryFromPklFile(fname,pmt_channel,ipw):
     if snr > 7:
 	# Calculate results
 	results = calc.dictionary_of_params(x2,y2)
-	mean, std, stderr = calc.calcJitterNew2(x1, y1, x2, y2)
+	mean, std, sterr = calc.calcJitterNew2(x1, y1, x2, y2)
 	results["time"] = mean
-	results["time error"] = stderr
+	results["time error"] = std
     else:
 	# No signal observerd, return zero
 	results = return_zero_result() 
@@ -69,8 +69,6 @@ def calcEntryFromPklFileMasterMode(fname,pmt_channel,ipw):
 	# No signal observerd, return zero
 	results = return_zero_result() 
     return results
-
-
 
 def runChannel(box_dir,channel_num,master_mode=False):
     timestamp = time.strftime("%y%m%d_%H.%M",time.gmtime())
@@ -142,54 +140,33 @@ def runChannel(box_dir,channel_num,master_mode=False):
         pin_error = None
     output_file.close()
 
+
 def runThroughSweep(mainDir):
-    if mainDir=="./broad_sweep":
-        folds = os.listdir(mainDir)
-        channels = range(1,9)
-        boxDirs = []
-        for fold in folds:
-            if "Box_" in fold:
-                if "Box_01" in fold:
-                    continue
-                boxDirs.append(fold)
-
-        for box in boxDirs:
-            boxDir = os.path.join(mainDir,box) 
-            if "Box_02" in boxDir:
-                print "Skipping first 5 channels of box 2"
-                channels = range(6,9)
-            for chan in channels:
-                runChannel(boxDir,chan)
-            channels = range(1,9)
-    else:
-        folds = os.listdir(mainDir)
-        channels = range(1,9)
-        boxDirs = []
-        for fold in folds:
-            if "Box_" in fold:
-                boxDirs.append(fold)
-
-        for box in boxDirs:
-            boxDir = os.path.join(mainDir,box) 
-            for chan in channels:
-                runChannel(boxDir,chan)
-
-def runThroughSweepMasterMode(mainDir):
     folds = os.listdir(mainDir)
     channels = range(1,9)
     boxDirs = []
     for fold in folds:
         if "Box_" in fold:
+            if "Box_01" in fold:
+                continue
             boxDirs.append(fold)
 
     for box in boxDirs:
         boxDir = os.path.join(mainDir,box) 
+        if "Box_02" in boxDir:
+            print "Skipping first 5 channels of box 2"
+            channels = range(6,9)
         for chan in channels:
-            runChannel(boxDir,chan,master_mode=True)
+            runChannel(boxDir,chan)
+        channels = range(1,9)
 
 if __name__=="__main__":
-    runThroughSweepMasterMode("Accumulated_Results/broad_sweep")
-    runThroughSweepMasterMode("Accumulated_Results/low_intensity")
+    parser = optparse.OptionParser()
+    parser.add_option("-b", dest="boxdir")
+    parser.add_option("-c", dest="chan")
+    (options,args) = parser.parse_args()
+    #runThroughSweep("./broad_sweep")
+    runChannel(options.boxdir,int(options.chan),master_mode=True)
 
 
 
