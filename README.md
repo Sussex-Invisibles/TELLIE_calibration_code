@@ -34,3 +34,24 @@ A function to re-run measurements on a particular .pkl data file. Results will b
 
 ### readPklFile.py 
 Opens and dumps to screen pulses contained within .pkl data files - for sanity checking. 
+
+### createSummaryFiles.py 
+This script will create JSON files containing, for each channel: 
+    - The IPW values used for each sweep
+    - The Photon Counts and RMS values for each channel
+    - The PIN readings and RMS values for each 
+
+The values are created by combining the broad and low sweep data, for each channel a plot appears showing the photon vs IPW plot allowing the user to see any discrepancies between the low and broad sweeps. The code takes 2 arguments, the directory containing the broad_sweep and low_intensity folders for each control mode (Master and Slave).
+
+### make_all_plots.py
+This script iterates over all the dat summary files produced and makes the corresponding plots. Essentially it is plot_ipw over all channels
+
+
+### make_dat_files.py
+When a sweep is run as well as storing the raw traces a summary dat file is made containing the interesting variables. During calibration some mistakes were made in how we analyse the data. This script was created to rerun the analysis over all channels and create "corrected" dat files.
+
+### make_dat_files_single.py
+Like make_dat_files but for a single channel.
+
+### make_dat_files_correct_intensity.py
+During initial calibration of TELLIE it was found that a bug in the scope acquisition code was causing the raw traces to be scaled up by various factors [2,2.5,5]. For all the low sweeps the acquisition was rerun after the bug was fixed but the broad sweeps on channels 1 to 13 were not redone due to time limitations. This code works in the same way as make_dat_files_single but also performs a check for large jumps in the amplitude of. It then rescales these traces to their correct value for further analysis.

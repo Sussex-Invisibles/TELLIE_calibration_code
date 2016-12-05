@@ -43,7 +43,11 @@ def calc_low_sweep_range(box, channel):
         photons[i] = plot_ipw.get_photons(results[i]["area"], 0.5)
     idx = np.where( photons < 1e5 )[0][0] - 1
     width_thresh = results[idx]["ipw"]
-    return range(width_thresh, width_thresh+1200, 25)
+    return range(width_thresh, width_thresh+1600, 25)
+
+def calc_start_ipw(box,channel):
+    print calc_low_sweep_range(box,channel)
+    return calc_low_sweep_range(box,channel)[0]
 
 if __name__=="__main__":
     parser = optparse.OptionParser()
@@ -62,14 +66,13 @@ if __name__=="__main__":
 
     #Fixed parameters
     delay = 1.0 # 1ms -> kHz
-    widths = calc_low_sweep_range(options.box, options.channel)
 
     #run the initial setup on the scope
     usb_conn = scope_connections.VisaUSB()
     scope = scopes.Tektronix3000(usb_conn)
     ###########################################
     trig_chan = 1 # Which channel is the trigger in?
-    pmt_chan = 2 # Which channel is the pmt in?
+    pmt_chan = 4 # Which channel is the pmt in?
     termination = 50 # Ohms
     trigger_level = 0.5 # half peak minimum
     falling_edge = True
@@ -93,7 +96,7 @@ if __name__=="__main__":
     scope.set_channel_termination(pmt_chan, termination)
     scope.set_single_acquisition() # Single signal acquisition mode
     scope.set_record_length(record_length)
-    scope.set_data_mode(half_length-350, half_length+300)
+    scope.set_data_mode(half_length-800, half_length+300)
     scope.set_edge_trigger(1, trig_chan, falling=False)
     scope.lock()
     scope.begin() # Acquires the pre-amble! 
@@ -107,11 +110,15 @@ if __name__=="__main__":
     
     output_file = file(output_filename,'w')
     output_file.write("#PWIDTH\tPWIDTH Error\tPIN\tPIN Error\tWIDTH\tWIDTH Error\tRISE\tRISE Error\tFALL\tFALL Error\tAREA\tAREA Error\tMinimum\tMinimum Error\tTime\tTime Error\n")
-
+    firstIter = True
     #Start scanning!
-    tmpResults = None
+    tmpResults = {}
     t_start = time.time()
-    for width in widths:
+    tmpResults["peak"] = -1.0
+    widths = [calc_start_ipw(box,channel)]
+    while tmpResults["peak"] < -0.05:
+        widths.append(widths[-1]+50)
+        width = widths[-1]
         min_volt = None
         loopStart = time.time()
         if tmpResults!=None:
@@ -120,10 +127,9 @@ if __name__=="__main__":
             min_volt = float(tmpResults["peak"])
             if min_volt == 0: # If bad data set, make none
                 min_volt = 50e-3 # Used to be None - Changed for speed-up!
-        tmpResults = sweep.sweep(saveDir,box,channel,width,scope,min_volt=min_volt)                
-
+        tmpResults = sweep.sweep(saveDir,box,channel,width,scope,trig_chan,pmt_chan,min_volt=min_volt,boxSwap=False)                
         # Write results to file
-        output_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n"%(width, 0,
+	output_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n"%(width, 0,
                                             tmpResults["pin"], tmpResults["pin error"],
                                             tmpResults["width"], tmpResults["width error"],
                                             tmpResults["rise"], tmpResults["rise error"],

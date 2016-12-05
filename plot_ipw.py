@@ -42,13 +42,32 @@ def read_scope_scan(fname):
         resultsList.append({"ipw":int(bits[0]),"ipw_err": int(bits[1]),"pin":int(bits[2]),"pin_err":float(bits[3]),"width":float(bits[4]),"width_err":float(bits[5]),"rise":float(bits[6]),"rise_err":float(bits[7]),"fall":float(bits[8]),"fall_err":float(bits[9]),"area":float(bits[10]),"area_err":float(bits[11]),"mini":float(bits[12]),"mini_err":float(bits[13]),"time":float(bits[14]),"time_err":float(bits[15])})
     return resultsList
 
+def read_scope_scan_master(fname):
+    """Read data as read out and stored to text file from the scope.
+    Columns are: ipw, pin, width, rise, fall, width (again), area.
+    Rise and fall are opposite to the meaning we use (-ve pulse)
+    """
+    fin = file(fname,'r')
+    resultsList = []
+    for line in fin.readlines():
+        if line[0]=="#":
+            continue
+        bits = line.split()
+        if len(bits)!=14:
+            continue
+        # Append needs to all be done in one. If we make a dict 'results = {}' which we 
+        # re-write and append it fills with all the same object and so we have multiple copies
+        # of the same result.
+        resultsList.append({"ipw":int(bits[0]),"ipw_err": int(bits[1]),"pin":int(bits[2]),"pin_err":float(bits[3]),"width":float(bits[4]),"width_err":float(bits[5]),"rise":float(bits[6]),"rise_err":float(bits[7]),"fall":float(bits[8]),"fall_err":float(bits[9]),"area":float(bits[10]),"area_err":float(bits[11]),"mini":float(bits[12]),"mini_err":float(bits[13])})
+    return resultsList
+
 def clean_data(res_list):
     """Clean data of Inf and Nan's so as not to confuse plots"""
     for i in range(len(res_list)):
-        if np.isfinite(res_list[i]["rise"]) == False:
+        if np.isfinite(res_list[i]["rise"]) == False or res_list[i]["rise"] > 100e-9:
             res_list[i]["rise"] = 0
             res_list[i]["rise_err"] = 0
-        if np.isfinite(res_list[i]["fall"]) == False:
+        if np.isfinite(res_list[i]["fall"]) == False or res_list[i]["fall"] > 100e-9:
             res_list[i]["fall"] = 0
             res_list[i]["fall_err"] = 0
         if np.isfinite(res_list[i]["width"]) == False:
@@ -77,9 +96,13 @@ def get_gain(applied_volts):
        taken July 2015 at site.
        See smb://researchvols.uscs.susx.ac.uk/research/neutrino_lab/SnoPlus/PmtCal.
     """
-    a, b, c = 12.5531, 12.8764, -1276.2
+    '''a, b, c = 12.5531, 12.8764, -1276.2
     gain = a*np.exp(b*applied_volts) + c
-    return gain
+    return gain'''
+    if applied_volts == 0.5:
+        return 5.651e+03
+    if applied_volts == 0.7:
+        return 1.021e+05
 
 def get_scope_response(applied_volts):
     """Get the system timing response"""
@@ -189,9 +212,13 @@ def master_plot(fname, ph_ipw, w_ipw, r_ipw, f_ipw, pin_ipw, ph_pin, cutoff=None
     return nCan
     
 if __name__=="__main__":
+    #Set in batch mode to stop showing windows
+    ROOT.gROOT.SetBatch(True)
     parser = optparse.OptionParser()
     parser.add_option("-f", dest="file")
     parser.add_option("-s", dest="scope", default="Tektronix")
+    #How many steps to cut off at the low intensity end of the data until the PMT pulse is distinguishable
+    parser.add_option("-x", dest="cutSteps",default=0)
     (options,args) = parser.parse_args()
     
     if options.scope!="Tektronix" and options.scope!="LeCroy":
@@ -218,6 +245,12 @@ if __name__=="__main__":
 
     res_list = read_scope_scan(options.file)
     res_list = clean_data(res_list)
+    #Slice res_list upto where area=0
+    cutIter = 0
+    for cutIter in range(0,len(res_list)):
+	if res_list[cutIter]["area"] == 0:
+	    break
+    res_list = res_list[:cutIter-int(options.cutSteps)+1]
 
     #make plots!
     photon_vs_pin = ROOT.TGraphErrors()
@@ -267,12 +300,20 @@ if __name__=="__main__":
         width_vs_photon.SetPointError(i,photon_err,width_time_err)
         width_vs_ipw.SetPoint(i,res_list[i]["ipw"],width_time)
         width_vs_ipw.SetPointError(i,res_list[i]["ipw_err"],width_time_err)
-        time_vs_ipw.SetPoint(i,res_list[i]["ipw"],pulse_sep)
-        time_vs_ipw.SetPointError(i,res_list[i]["ipw_err"],pulse_sep_err)
+        if np.isfinite(pulse_sep) and np.isfinite(pulse_sep_err) and pulse_sep != 0 and res_list[i]["ipw"] != 0:
+            time_vs_ipw.SetPoint(i,res_list[i]["ipw"],pulse_sep)
+            time_vs_ipw.SetPointError(i,res_list[i]["ipw_err"],pulse_sep_err)
         
         #For Cutoff calc
         w[i], ipw[i] = width_time, res_list[i]["ipw"]
         #print w[i], rise_time, fall_time
+    for i in range(time_vs_ipw.GetN()):
+        x = ROOT.Double(-1.0)
+        y = ROOT.Double(-1.0) 
+        time_vs_ipw.GetPoint(i,x,y)
+        print time_vs_ipw.GetPoint(i,x,y)
+        if np.isclose(float(x),0.0) and np.isclose(float(y),0.0):
+            time_vs_ipw.RemovePoint(i)
 
     set_style(pin_vs_ipw,1)
     set_style(photon_vs_pin,1)
@@ -351,7 +392,7 @@ if __name__=="__main__":
     can.Print("%s/width_vs_ipw.pdf"%output_dir)
 
     time_vs_ipw.Draw("ap")
-    can.Print("%s/time_vs_ipw.pdf"%output_dir)
+    can.Print("%s/Chan%d_time_vs_ipw.pdf"% (output_dir,logical_channel))
 
     fout = ROOT.TFile("%s/plots.root"%output_dir,"recreate")
     
@@ -364,6 +405,7 @@ if __name__=="__main__":
     fall_vs_photon.Write()
     fall_vs_ipw.Write()
     time_vs_ipw.Write()
+    pin_vs_ipw.Write()
 
     out_dir = os.path.join(sweep_type,"plots/")
     master_name = "%sChan%02d_%s.pdf" % (out_dir, logical_channel, sweep_type)
@@ -375,4 +417,4 @@ if __name__=="__main__":
     fout.Close()
 
     time.sleep(2)
-    os.system("open %s"% master_name)  
+    #os.system("open %s"% master_name)  

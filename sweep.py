@@ -18,9 +18,10 @@ import sys
 import readPklWaveFile
 import calc_utils as calc
 import numpy as np
+#import matplotlib.pyplot as plt
 
-#port_name = "/dev/tty.usbserial-FTE3C0PG"
-port_name = "/dev/tty.usbserial-FTGA2OCZ"
+port_name = "/dev/tty.usbserial-FTE3C0PG"
+#port_name = "/dev/tty.usbserial-FTGA2OCZ"
 ## TODO: better way of getting the scope type
 scope_name = "Tektronix3000"
 _boundary = [0,1.5e-3,3e-3,7e-3,15e-3,30e-3,70e-3,150e-3,300e-3,700e-3,1000]
@@ -73,8 +74,8 @@ def return_zero_result():
 
 def save_scopeTraces(fileName, scope, channels, noPulses):
     """Save a number of scope traces to file - uses compressed .pkl"""
-    scope._get_preamble(channels[-1])
-    results = utils.PickleFile(fileName, len(channels))
+    scope._get_preamble(channels[0])
+    results = utils.PickleFile(fileName, channels)
     results.add_meta_data("timeform_1", scope.get_timeform(channels[0]))
 
     #ct = scope.acquire_time_check()
@@ -87,8 +88,8 @@ def save_scopeTraces(fileName, scope, channels, noPulses):
     t_start, loopStart = time.time(),time.time()
     for i in range(noPulses):
         try:
-            for chan in channels:
-                results.add_data(scope.get_waveform(chan), chan)
+    	    for chan in channels:
+	        results.add_data(scope.get_waveform(chan), chan)
         except Exception, e:
             print "Scope died, acquisition lost."
             print e
@@ -118,7 +119,7 @@ def find_and_set_scope_y_scale(trig_chan, pmt_chan, scope, scaleGuess=None):
     #else:
     #scope.set_channel_y(pmt_chan, _v_div[-1], pos=3)     
 
-    time.sleep(0.5) # Need to wait for scope to recognise new settings
+    time.sleep(1.0) # Need to wait for scope to recognise new settings
     scope._get_preamble(pmt_chan)
 
     # Calc min value
@@ -152,6 +153,8 @@ def find_and_set_scope_y_scale(trig_chan, pmt_chan, scope, scaleGuess=None):
     
     # Set scale and return
     scope.set_channel_y(pmt_chan, scale, pos=3) # set scale, starting with largest
+    time.sleep(1.0) # Need to wait for scope to recognise new settings
+    scope._get_preamble(pmt_chan)
     print "TOTAL FUNC TIME = %1.2f s" % (time.time() - func_time)
     sc.disable_external_trigger()
     return True
@@ -189,7 +192,7 @@ def printParamsDict(dict, name):
     print "-"
     print "Pulse sep \t= %1.2f +/- %1.2f ns" % (time*1e9, timeStd*1e9)
 
-def find_pulse(x, y, step_back = 50, step_forward = 200):
+def find_pulse(x, y, step_back = 500, step_forward = 500):
     """Use differential to find the PMT pulse in the long trace"""
     global pulse_edge
     if pulse_edge == None:
@@ -197,7 +200,38 @@ def find_pulse(x, y, step_back = 50, step_forward = 200):
         print pulse_edge
     return x[pulse_edge-step_back:pulse_edge+step_forward], y[:,pulse_edge-step_back:pulse_edge+step_forward]
 
-def sweep(dir_out,box,channel,width,scope,min_volt=None):
+
+def find_pulse_2(x, y, step_back = 100, step_forward = 100):
+    """Method to find the pulse by looking for the minima of the trace"""
+    meany = np.mean(y,axis=0)
+    print "Len meany: "+str(len(meany))
+    print "Len x: "+str(len(x))
+    minIndex = np.argmin(meany)
+    return x[minIndex-step_back:minIndex+step_forward], y[:,minIndex-step_back:minIndex+step_forward]
+
+def find_pulse_3(x,y, noise_factor=1.5, step_back=5, step_forward=5):
+    """Method to find the pulse by looking for the minima of the trace"""
+    meany = np.mean(y,axis=0)
+    minIndex = np.argmin(meany)
+    #Look at noise by examining trace 40ns before PMT pulse
+    noiseIndex = minIndex-100
+    maxNoise = np.amax(np.fabs(y[:,:noiseIndex]))
+    lowerIndex = 0
+    upperIndex = 0
+    #Find lower limit
+    for ind in range(minIndex,-1,-1):
+        if np.fabs(meany[ind]) < noise_factor*maxNoise:
+           lowerIndex = ind-step_back
+           break
+    
+    for ind in range(minIndex,len(meany)):
+        if np.fabs(meany[ind]) < noise_factor*maxNoise:
+           upperIndex = ind+step_forward
+           break
+	
+    return x[lowerIndex:upperIndex], y[:,lowerIndex:upperIndex]
+
+def sweep(dir_out,box,channel,width,scope,trig_channel,pmt_channel,min_volt=None,boxSwap=False):
     """Perform a measurement using a default number of
     pulses, with user defined width, channel and rate settings.
     """
@@ -211,8 +245,12 @@ def sweep(dir_out,box,channel,width,scope,min_volt=None):
     pulse_number = 1000
     #first select the correct channel and provide settings
     logical_channel = (box-1)*8 + channel
-    
-    sc.select_channel(logical_channel)
+    #If boxSwap set to true we are using the lower ribbon port on the control box to controll the upper boxes
+    if boxSwap:
+	tellie_logical_chan   = (box-8)*8+channel
+	sc.select_channel(tellie_logical_chan)
+    else:
+	sc.select_channel(logical_channel)
     sc.set_pulse_width(width)
     sc.set_pulse_height(16383)
     sc.set_pulse_number(pulse_number)
@@ -239,27 +277,27 @@ def sweep(dir_out,box,channel,width,scope,min_volt=None):
     fname = "%sWidth%05d" % (directory,width)
     
     # Check scope
-    ck = find_and_set_scope_y_scale(1, 2, scope, scaleGuess=min_volt)
+    ck = find_and_set_scope_y_scale(trig_channel, pmt_channel, scope, scaleGuess=min_volt)
     if ck == True:
         print "Saving raw files to: %s..." % fname
         sc.enable_external_trig()
         time.sleep(0.2)
-        save_ck = save_scopeTraces(fname, scope, [1,2], 100)
+        save_ck = save_scopeTraces(fname, scope, [trig_channel,pmt_channel], 100)
         sc.stop()
         if save_ck == True:
             # Calc and return params
-            x1,y1 = calc.readPickleChannel(fname, 1)
-            x2,y2 = calc.readPickleChannel(fname, 2)
-            x2,y2 = find_pulse(x2,y2)
+            x1,y1 = calc.readPickleChannel(fname, trig_channel,[trig_channel,pmt_channel])
+            x2,y2 = calc.readPickleChannel(fname, pmt_channel,[trig_channel,pmt_channel])
+            x2Cut,y2Cut = find_pulse_3(x2,y2)
             calc.plot_eg_pulses(x2, y2, 10, fname='%s/LastMeasuredPulses.png' % dir_out.split("/")[0])
-            os.system("open %s/LastMeasuredPulses.png" % dir_out.split("/")[0])
+            #os.system("open %s/LastMeasuredPulses.png" % dir_out.split("/")[0])
             # Make sure we see a signal well above noise
             snr = calc.calcSNR(x2, y2)
             print "SNR: ", snr
             if snr > 7:
                 # Calculate results
-                results = calc.dictionary_of_params(x2,y2)
-                mean, std, sterr = calc.calcJitter(x2, y2, x1, y1, threshold=0.4)
+                results = calc.dictionary_of_params(x2Cut,y2Cut)
+                mean, std, sterr = calc.calcJitter(x2Cut, y2Cut, x1, y1, threshold=0.4)
                 results["time"] = mean
                 results["time error"] = std
                 results["pin"] = pin
